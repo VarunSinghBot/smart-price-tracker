@@ -29,28 +29,21 @@ app.use(cookieParser());
 // -----------------------------------------------------------------------------------------------------------------
 
 // Routes Import
-// Duplicate import removed
-// import userRouter from "./routes/user.route";
-// import contentRouter from "./routes/content.route";
-// import tagRouter from "./routes/tag.route";
-// import linkRouter from "./routes/link.route";
+import authRouter from "./routes/auth.route.js";
 
 // Routes Declaration
-// app.use("/api/v1/users", userRouter);
-// app.use("/api/v1/content", contentRouter);
-// app.use("/api/v1/tags", tagRouter);
-// app.use("/api/v1/links", linkRouter);
+app.use("/api/v1/auth", authRouter);
 
 // Root endpoint to list all available endpoints
 app.get("/", (req, res) => {
     res.json({
         message: "Welcome to the API!",
-        // endpoints: {
-        //     users: "/api/v1/users",
+        endpoints: {
+            auth: "/api/v1/auth",
         //     content: "/api/v1/content",
         //     tags: "/api/v1/tags",
         //     links: "/api/v1/links",
-        // },
+        },
     });
 });
 
