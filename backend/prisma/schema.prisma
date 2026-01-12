@@ -14,48 +14,59 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-
-  products  Product[]
-  alerts    Alert[]
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String?  // nullable for OAuth users
+  googleId   String?  @unique
+  username   String?  @unique  // optional username, unique if provided, needs to be checked for availability
+  name       String?  // real name for display
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
-model Product {
-  id        String   @id @default(uuid())
-  url       String
-  title     String
-  platform  String
-  createdAt DateTime @default(now())
+// model User {
+//   id        String   @id @default(uuid())
+//   email     String   @unique
+//   password  String
+//   createdAt DateTime @default(now())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+//   products  Product[]
+//   alerts    Alert[]
+// }
 
-  prices    PriceHistory[]
+// model Product {
+//   id        String   @id @default(uuid())
+//   url       String
+//   title     String
+//   platform  String
+//   createdAt DateTime @default(now())
 
-  alerts Alert[]
-}
+//   userId    String
+//   user      User     @relation(fields: [userId], references: [id])
 
-model PriceHistory {
-  id        String   @id @default(uuid())
-  price     Float
-  scrapedAt DateTime @default(now())
+//   prices    PriceHistory[]
 
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-}
+//   alerts Alert[]
+// }
 
-model Alert {
-  id        String   @id @default(uuid())
-  target    Float
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+// model PriceHistory {
+//   id        String   @id @default(uuid())
+//   price     Float
+//   scrapedAt DateTime @default(now())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+//   productId String
+//   product   Product  @relation(fields: [productId], references: [id])
+// }
 
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-}
+// model Alert {
+//   id        String   @id @default(uuid())
+//   target    Float
+//   active    Boolean  @default(true)
+//   createdAt DateTime @default(now())
+
+//   userId    String
+//   user      User     @relation(fields: [userId], references: [id])
+
+//   productId String
+//   product   Product  @relation(fields: [productId], references: [id])
+// }
