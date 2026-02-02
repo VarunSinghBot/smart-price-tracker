@@ -8,11 +8,13 @@ import LandingPage from './pages/LandingPage'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import AuthLayout from './components/auth/AuthLayout'
+import AuthCallback from './components/auth/AuthCallback'
 import Dashboard from './pages/Dashboard'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Contact from './pages/Contact'
 import ErrPage from './ErrPage';
+import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -21,14 +23,17 @@ function App() {
         {/* Landing Page */}
         <Route path="/" element={<LandingPage />} />
         
-        {/* Auth routes wrapped in AuthLayout */}
+        {/* Auth routes wrapped in AuthLayout and PublicRoute */}
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
         </Route>
         
-        {/* Dashboard */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* OAuth Callback */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        
+        {/* Dashboard - Protected */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         
         {/* Legal Pages */}
         <Route path="/terms" element={<Terms />} />

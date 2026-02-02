@@ -90,37 +90,39 @@ function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden">
+    <div className="min-h-screen flex flex-col overflow-hidden bg-[#E8DCC4]">
       <Navbar />
 
-      {/* Hero Section with Parallax */}
-      <section className="relative bg-linear-to-br from-blue-600 via-blue-700 to-purple-700 text-white overflow-hidden">
-        {/* Animated background shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="parallax absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl" data-speed="0.3"></div>
-          <div className="parallax absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" data-speed="0.5"></div>
-          <div className="parallax absolute top-1/2 left-1/2 w-80 h-80 bg-yellow-400/10 rounded-full blur-3xl" data-speed="0.4"></div>
+      {/* Hero Section */}
+      <section className="relative bg-[#6B9B8E] text-white overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden opacity-5">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-white"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-white"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="text-center">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight animate-fade-in-up">
-              Smart Price Tracker &<br />
-              <span className="bg-clip-text text-transparent bg-linear-to-r from-yellow-300 to-yellow-500">
-                Deal Intelligence Platform
-              </span>
+            <div className="inline-block mb-6">
+              <div className="flex items-center gap-3 px-6 py-3 bg-[#F4A460]">
+                <span className="w-2 h-2 bg-white animate-pulse"></span>
+                <span className="text-sm font-bold">Track Smart. Save More.</span>
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              Never Overpay Again<br />
+              <span className="text-[#F4DFC8]">with Smart Price Tracking</span>
             </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto animate-fade-in-up animation-delay-200">
-              Track product prices across multiple platforms, get instant deal alerts,
-              and never overpay again. Save money effortlessly with intelligent price monitoring.
+            <p className="text-xl md:text-2xl mb-8 text-gray-100 max-w-3xl mx-auto">
+              Monitor product prices across multiple platforms, receive instant deal alerts,
+              and save money effortlessly with intelligent price monitoring.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up animation-delay-400">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 to="/signup"
-                className="group px-8 py-4 bg-yellow-400 text-gray-900 rounded-lg font-bold text-lg hover:bg-yellow-300 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105"
+                className="group px-8 py-4 bg-[#F4A460] text-white font-bold text-lg hover:bg-[#E89450] transition-all shadow-md hover:shadow-lg border-3 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
               >
                 <span className="flex items-center gap-2">
-                  Get Started Free
+                  Start Tracking Free
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -128,48 +130,67 @@ function LandingPage() {
               </Link>
               <button
                 onClick={scrollToFeatures}
-                className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white rounded-lg font-bold text-lg hover:bg-white/20 transition-all"
+                className="px-8 py-4 bg-transparent border-3 border-white text-white font-bold text-lg hover:bg-white/10 transition-all drop-shadow-[4px_4px_0px_rgba(0,0,0,0.3)]"
               >
                 Learn More
               </button>
             </div>
+
+            <div className="mt-12 flex items-center justify-center gap-8 text-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Free Forever</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>No Credit Card</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Unlimited Tracking</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Wave divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg className="w-full h-16 md:h-24" viewBox="0 0 1440 120" preserveAspectRatio="none">
-            <path fill="#f9fafb" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"></path>
-          </svg>
-        </div>
+        {/* No rounded wave divider - simple straight edge */}
+        <div className="h-4 bg-[#E8DCC4]"></div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-gray-50 relative">
+      <section id="features" className="py-20 bg-[#E8DCC4] relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16 fade-in-section opacity-0 translate-y-10 transition-all duration-1000">
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
-              Powerful Features to{" "}
-              <span className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Save You Money
-              </span>
+          <div className="text-center mb-16">
+            <span className="inline-block px-4 py-2 bg-[#E8F4F1] text-[#6B9B8E] text-sm font-bold mb-4">
+              FEATURES
+            </span>
+            <h2 className="text-3xl md:text-5xl font-bold text-gray-800 mb-4">
+              Everything You Need to<br />
+              <span className="text-[#6B9B8E]">Track & Save</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need to track prices and find the best deals online
+              Powerful tools designed to help you never overpay
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="fade-in-section opacity-0 translate-y-10 transition-all duration-1000 bg-white p-6 rounded-xl shadow-md hover:shadow-2xl border border-gray-100 group"
-                style={{ transitionDelay: `${index * 100}ms` }}
+                className="bg-white border-4 border-black p-6 hover:shadow-md transition-all group hover:border-[#6B9B8E] drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
               >
-                <div className="text-blue-600 mb-4 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                  {feature.icon}
+                <div className="w-14 h-14 bg-[#E8F4F1] flex items-center justify-center mb-4 group-hover:bg-[#6B9B8E] transition-colors border-2 border-black">
+                  <div className="text-[#6B9B8E] group-hover:text-white transition-colors">
+                    {feature.icon}
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-xl font-bold text-gray-800 mb-3">
                   {feature.title}
                 </h3>
                 <p className="text-gray-600">{feature.description}</p>
@@ -181,100 +202,143 @@ function LandingPage() {
 
       {/* How It Works Section */}
       <section className="py-20 bg-white relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-linear-to-l from-blue-50 to-transparent opacity-50"></div>
+        <div className="absolute inset-0 bg-[#FFF8DC] opacity-30"></div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="text-center mb-16 fade-in-section opacity-0 translate-y-10 transition-all duration-1000">
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
-              How It{" "}
-              <span className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Works
-              </span>
+          <div className="text-center mb-16">
+            <span className="inline-block px-4 py-2 bg-[#E8F4F1] text-[#6B9B8E] text-sm font-bold mb-4">
+              HOW IT WORKS
+            </span>
+            <h2 className="text-3xl md:text-5xl font-bold text-gray-800 mb-4">
+              Start Saving in<br />
+              <span className="text-orange-600">Three Simple Steps</span>
             </h2>
-            <p className="text-xl text-gray-600">
-              Start saving in three simple steps
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-            {/* Connecting line for desktop */}
-            <div className="hidden md:block absolute top-8 left-1/6 right-1/6 h-0.5 bg-linear-to-r from-blue-600 via-purple-600 to-blue-600"></div>
-
-            <div className="text-center fade-in-section opacity-0 translate-y-10 transition-all duration-1000 animation-delay-200">
-              <div className="relative inline-block mb-4">
-                <div className="w-16 h-16 bg-linear-to-br from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto shadow-lg transform hover:scale-110 transition-transform">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="relative inline-block mb-6">
+                <div className="w-20 h-20 bg-[#6B9B8E] text-white flex items-center justify-center text-3xl font-bold border-3 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                   1
                 </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-ping"></div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Add Products
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                Add Product URL
               </h3>
-              <p className="text-gray-600">
-                Simply paste the product URL from your favorite online store
+              <p className="text-gray-600 text-lg">
+                Simply paste the product link from any online store and we'll start tracking it
               </p>
             </div>
 
-            <div className="text-center fade-in-section opacity-0 translate-y-10 transition-all duration-1000 animation-delay-400">
-              <div className="relative inline-block mb-4">
-                <div className="w-16 h-16 bg-linear-to-br from-purple-600 to-purple-700 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto shadow-lg transform hover:scale-110 transition-transform">
+            <div className="text-center">
+              <div className="relative inline-block mb-6">
+                <div className="w-20 h-20 bg-[#F4A460] text-white flex items-center justify-center text-3xl font-bold border-3 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                   2
                 </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-ping animation-delay-200"></div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Set Your Target Price
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                Set Target Price
               </h3>
-              <p className="text-gray-600">
-                Choose your ideal price and we'll monitor it 24/7
+              <p className="text-gray-600 text-lg">
+                Choose your ideal price point and we'll monitor it around the clock
               </p>
             </div>
 
-            <div className="text-center fade-in-section opacity-0 translate-y-10 transition-all duration-1000 animation-delay-600">
-              <div className="relative inline-block mb-4">
-                <div className="w-16 h-16 bg-linear-to-br from-blue-600 to-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto shadow-lg transform hover:scale-110 transition-transform">
+            <div className="text-center">
+              <div className="relative inline-block mb-6">
+                <div className="w-20 h-20 bg-[#6B9B8E] text-white flex items-center justify-center text-3xl font-bold border-3 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]">
                   3
                 </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-ping animation-delay-400"></div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Get Instant Alerts
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                Get Deal Alerts
               </h3>
-              <p className="text-gray-600">
-                Receive notifications when the price drops to your target
+              <p className="text-gray-600 text-lg">
+                Receive instant notifications when prices drop to your target
               </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-[#F4A460] text-white font-bold text-lg hover:bg-[#E89450] transition-all shadow-md border-3 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+            >
+              Get Started Now
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 bg-[#6B9B8E] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+            <div>
+              <div className="text-5xl md:text-6xl font-bold mb-3">10K+</div>
+              <div className="text-xl text-gray-200">Active Users</div>
+            </div>
+            <div>
+              <div className="text-5xl md:text-6xl font-bold mb-3">₹50L+</div>
+              <div className="text-xl text-gray-200">Total Savings</div>
+            </div>
+            <div>
+              <div className="text-5xl md:text-6xl font-bold mb-3">100K+</div>
+              <div className="text-xl text-gray-200">Products Tracked</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-linear-to-r from-blue-600 via-purple-600 to-blue-600 text-white relative overflow-hidden">
-        {/* Animated background */}
+      <section className="py-20 bg-[#E8DCC4] relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="parallax absolute top-0 left-0 w-full h-full bg-linear-to-br from-blue-500/20 to-purple-500/20" data-speed="0.2"></div>
-          <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-400/20 rounded-full blur-2xl animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-40 h-40 bg-blue-400/20 rounded-full blur-2xl animate-pulse animation-delay-1000"></div>
+          <div className="absolute top-10 left-10 w-32 h-32 bg-[#E8F4F1] opacity-30"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-[#E8F4F1] opacity-30"></div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative fade-in-section opacity-0 translate-y-10 transition-all duration-1000">
-          <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">
-            Ready to Start{" "}
-            <span className="text-yellow-300">Saving Money?</span>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-gray-800">
+            Ready to Start Saving Money?
           </h2>
-          <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            Join thousands of smart shoppers who never overpay. Start tracking prices today!
+          <p className="text-xl md:text-2xl mb-8 text-gray-600">
+            Join thousands of smart shoppers who track prices and save big on their purchases
           </p>
-          <Link
-            to="/signup"
-            className="group inline-flex items-center gap-2 px-8 py-4 bg-yellow-400 text-gray-900 rounded-lg font-bold text-lg hover:bg-yellow-300 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105"
-          >
-            Create Free Account
-            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/signup"
+              className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#F4A460] text-white font-bold text-lg hover:bg-[#E89450] transition-all shadow-md border-3 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+            >
+              Create Free Account
+              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center px-8 py-4 bg-white border-3 border-black text-gray-800 font-bold text-lg hover:bg-gray-50 transition-all drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+            >
+              Sign In
+            </Link>
+          </div>
+          
+          <div className="mt-12 flex items-center justify-center gap-8 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>No setup fees</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Cancel anytime</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -284,3 +348,4 @@ function LandingPage() {
 }
 
 export default LandingPage;
+                  

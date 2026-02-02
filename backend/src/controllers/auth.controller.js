@@ -1,11 +1,12 @@
 import bcrypt from "bcrypt";
 import { z } from "zod";
+import { OAuth2Client } from "google-auth-library";
 import prisma from "../utils/prisma.js";
 import { generateTokens } from "../utils/tokenGenerator.js";
 
 // Validation schemas
 const signupSchema = z.object({
-    email: z.string().email("Invalid email address"),
+    email: z.email("Invalid email address"),
     username: z.string().min(3, "Username must be at least 3 characters").max(30),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
@@ -218,28 +219,192 @@ export const getCurrentUser = async (req, res) => {
     }
 };
 
-// Google OAuth controller (placeholder for future implementation)
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+);
+
+// Google OAuth - Initiate authentication
 export const googleAuth = async (req, res) => {
     try {
-        const { googleToken } = req.body;
+        const authUrl = googleClient.generateAuthUrl({
+            access_type: 'offline',
+            scope: [
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/userinfo.email'
+            ],
+            prompt: 'consent'
+        });
 
-        // TODO: Implement Google OAuth verification
-        // 1. Verify Google token
-        // 2. Get user info from Google
-        // 3. Check if user exists with googleId
-        // 4. If not, create new user
-        // 5. Generate JWT tokens
-        // 6. Return user data and tokens
-
-        return res.status(501).json({
-            success: false,
-            message: "Google authentication not yet implemented"
+        return res.status(200).json({
+            success: true,
+            data: {
+                authUrl
+            }
         });
     } catch (error) {
-        console.error("Google auth error:", error);
+        console.error("Google auth initiation error:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: "Failed to initiate Google authentication"
+        });
+    }
+};
+
+// Google OAuth - Callback handler
+export const googleCallback = async (req, res) => {
+    try {
+        const { code } = req.query;
+
+        if (!code) {
+            return res.status(400).json({
+                success: false,
+                message: "Authorization code is required"
+            });
+        }
+
+        // Exchange authorization code for tokens
+        const { tokens } = await googleClient.getToken(code);
+        googleClient.setCredentials(tokens);
+
+        // Verify the ID token and get user info
+        const ticket = await googleClient.verifyIdToken({
+            idToken: tokens.id_token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name, picture } = payload;
+
+        // Check if user exists with this Google ID
+        let user = await prisma.user.findUnique({
+            where: { googleId }
+        });
+
+        if (!user) {
+            // Check if user exists with this email
+            user = await prisma.user.findUnique({
+                where: { email }
+            });
+
+            if (user) {
+                // Link Google account to existing user
+                user = await prisma.user.update({
+                    where: { email },
+                    data: { googleId }
+                });
+            } else {
+                // Create new user
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        googleId,
+                        name: name || email.split('@')[0],
+                        username: email.split('@')[0] + '_' + Date.now()
+                    }
+                });
+            }
+        }
+
+        // Generate JWT tokens
+        const { accessToken, refreshToken } = generateTokens(user.id);
+
+        // Set cookies
+        res.cookie("accessToken", accessToken, getCookieOptions());
+        res.cookie("refreshToken", refreshToken, getCookieOptions(true));
+
+        // Remove password from user object
+        const { password, ...userWithoutPassword } = user;
+
+        // Encode user data for URL (we'll pass it to frontend)
+        const userData = encodeURIComponent(JSON.stringify(userWithoutPassword));
+
+        // Redirect to frontend with success
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        return res.redirect(`${frontendUrl}/auth/callback?success=true&token=${accessToken}&user=${userData}`);
+    } catch (error) {
+        console.error("Google callback error:", error);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        return res.redirect(`${frontendUrl}/auth/callback?success=false&error=${encodeURIComponent(error.message)}`);
+    }
+};
+
+// Google OAuth - Token verification (for frontend)
+export const googleTokenAuth = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({
+                success: false,
+                message: "ID token is required"
+            });
+        }
+
+        // Verify the ID token
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name } = payload;
+
+        // Check if user exists with this Google ID
+        let user = await prisma.user.findUnique({
+            where: { googleId }
+        });
+
+        if (!user) {
+            // Check if user exists with this email
+            user = await prisma.user.findUnique({
+                where: { email }
+            });
+
+            if (user) {
+                // Link Google account to existing user
+                user = await prisma.user.update({
+                    where: { email },
+                    data: { googleId }
+                });
+            } else {
+                // Create new user
+                user = await prisma.user.create({
+                    data: {
+                        email,
+                        googleId,
+                        name: name || email.split('@')[0],
+                        username: email.split('@')[0] + '_' + Date.now()
+                    }
+                });
+            }
+        }
+
+        // Generate JWT tokens
+        const { accessToken, refreshToken } = generateTokens(user.id);
+
+        // Set cookies
+        res.cookie("accessToken", accessToken, getCookieOptions());
+        res.cookie("refreshToken", refreshToken, getCookieOptions(true));
+
+        // Remove sensitive data
+        const { password, ...userWithoutPassword } = user;
+
+        return res.status(200).json({
+            success: true,
+            message: "Google authentication successful",
+            data: {
+                user: userWithoutPassword,
+                accessToken
+            }
+        });
+    } catch (error) {
+        console.error("Google token auth error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Google authentication failed"
         });
     }
 };

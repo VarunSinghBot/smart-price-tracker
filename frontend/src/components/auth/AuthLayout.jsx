@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 
 function AuthLayout() {
   return (
-    <div className="w-full min-h-dvh flex">
+    <div className="w-full h-dvh flex">
       {/* Left Side - Gradient Background with Image */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <img

@@ -34,7 +34,6 @@ function Navbar() {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Features", path: "/#features" },
-    { name: "Terms & Conditions", path: "/terms" },
     { name: "Contact", path: "/contact" },
   ];
 
@@ -49,30 +48,27 @@ function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
+    <nav className="bg-[#6B9B8E] border-b-4 border-black sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">$</span>
+          <Link to="/" className="flex items-center space-x-2 group hover:cursor-pointer">
+            <div className="w-9 h-9 bg-white flex items-center justify-center border-2 border-black group-hover:bg-[#E8DCC4] transition-colors">
+              <span className="text-[#6B9B8E] font-bold text-xl">$</span>
             </div>
-            <span className="text-xl font-bold text-gray-900 hidden sm:block">
+            <span className="text-xl font-bold text-white hidden sm:block">
               Smart Price Tracker
-            </span>
-            <span className="text-xl font-bold text-gray-900 sm:hidden">
-              SPT
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
                 onClick={link.path === "/#features" ? scrollToFeatures : undefined}
-                className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                className="px-4 py-2 text-white hover:bg-white hover:text-[#6B9B8E] transition-all font-semibold border-2 border-transparent hover:border-black hover:cursor-pointer"
               >
                 {link.name}
               </Link>
@@ -80,22 +76,22 @@ function Navbar() {
           </div>
 
           {/* Auth Buttons - Desktop */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center gap-3">
             {isAuthenticated ? (
               <>
                 <Link
                   to="/dashboard"
-                  className="px-4 py-2 text-gray-700 font-medium hover:text-blue-600 transition-colors"
+                  className="px-6 py-2 bg-white text-[#6B9B8E] font-bold border-2 border-black hover:bg-[#E8DCC4] transition-colors hover:cursor-pointer"
                 >
                   Dashboard
                 </Link>
-                <div className="flex items-center space-x-3">
-                  <span className="text-gray-700 font-medium">
-                    {user?.username || user?.email}
+                <div className="flex items-center gap-3">
+                  <span className="text-white font-medium text-sm px-3 py-1 bg-[#5A8A7D] border-2 border-black">
+                    {user?.username || user?.email?.split('@')[0]}
                   </span>
                   <button
                     onClick={handleLogout}
-                    className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors shadow-md hover:shadow-lg"
+                    className="px-5 py-2 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black hover:cursor-pointer"
                   >
                     Logout
                   </button>
@@ -105,13 +101,13 @@ function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-blue-600 font-medium hover:text-blue-700 transition-colors"
+                  className="px-5 py-2 text-white font-semibold hover:bg-white hover:text-[#6B9B8E] transition-all border-2 border-transparent hover:border-black hover:cursor-pointer"
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                  className="px-6 py-2 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black hover:cursor-pointer"
                 >
                   Sign Up
                 </Link>
@@ -122,11 +118,11 @@ function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-2 hover:bg-white hover:text-[#6B9B8E] text-white transition-colors border-2 border-black bg-[#5A8A7D] hover:cursor-pointer"
             aria-label="Toggle menu"
           >
             <svg
-              className="w-6 h-6 text-gray-700"
+              className="w-6 h-6"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -146,8 +142,8 @@ function Navbar() {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
-          <div className="px-2 pt-2 pb-3 space-y-1">
+        <div className="lg:hidden bg-white border-t-4 border-black">
+          <div className="px-4 py-4 space-y-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -156,27 +152,28 @@ function Navbar() {
                   if (link.path === "/#features") scrollToFeatures(e);
                   setIsMenuOpen(false);
                 }}
-                className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors font-medium"
+                className="block px-4 py-3 text-[#6B9B8E] hover:bg-[#E8DCC4] transition-colors font-semibold border-2 border-black hover:cursor-pointer"
               >
                 {link.name}
               </Link>
             ))}
-            <div className="flex flex-col space-y-2 px-3 pt-4">
+            
+            <div className="pt-3 border-t-2 border-[#6B9B8E] mt-3 space-y-2">
               {isAuthenticated ? (
                 <>
                   <Link
                     to="/dashboard"
                     onClick={() => setIsMenuOpen(false)}
-                    className="px-4 py-2 text-center text-blue-600 border border-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                    className="block px-4 py-3 text-center bg-[#6B9B8E] text-white font-bold hover:bg-[#5A8A7D] transition-colors border-2 border-black hover:cursor-pointer"
                   >
-                    Dashboard
+                    Go to Dashboard
                   </Link>
-                  <div className="px-4 py-2 text-center text-gray-700 font-medium">
+                  <div className="px-4 py-2 text-center text-[#6B9B8E] font-medium border-2 border-[#6B9B8E]">
                     {user?.username || user?.email}
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 text-center bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                    className="w-full px-4 py-3 text-center bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black hover:cursor-pointer"
                   >
                     Logout
                   </button>
@@ -186,14 +183,14 @@ function Navbar() {
                   <Link
                     to="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className="px-4 py-2 text-center text-blue-600 border border-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors"
+                    className="block px-4 py-3 text-center text-[#6B9B8E] font-bold hover:bg-[#E8DCC4] transition-colors border-2 border-black hover:cursor-pointer"
                   >
                     Login
                   </Link>
                   <Link
                     to="/signup"
                     onClick={() => setIsMenuOpen(false)}
-                    className="px-4 py-2 text-center bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    className="block px-4 py-3 text-center bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black hover:cursor-pointer"
                   >
                     Sign Up
                   </Link>

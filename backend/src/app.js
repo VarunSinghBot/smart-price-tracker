@@ -33,7 +33,8 @@ import authRouter from "./routes/auth.route.js";
 
 // Routes Declaration
 app.use("/api/v1/auth", authRouter);
-
+// app.use("/api/v1/auth/google", authRouter); // Google OAuth route
+// app.use("/api/v1/dashboard",dashboardRoutes)
 // Root endpoint to list all available endpoints
 app.get("/", (req, res) => {
     res.json({
