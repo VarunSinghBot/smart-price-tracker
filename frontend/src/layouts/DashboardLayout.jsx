@@ -1,12 +1,170 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
+  const [searchInput, setSearchInput] = useState("");
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [detectedUrl, setDetectedUrl] = useState("");
+  const [scrapedProducts, setScrapedProducts] = useState([]);
+  const [isLoadingScrape, setIsLoadingScrape] = useState(false);
+  const [scrapeError, setScrapeError] = useState(null);
+
+  // Sync activeTab with current route
+  useEffect(() => {
+    if (location.pathname === '/dashboard') {
+      setActiveTab('home');
+    } else if (location.pathname === '/trackers') {
+      setActiveTab('trackers');
+    }
+  }, [location.pathname]);
+
+  // Function to validate if input is a URL
+  const isValidUrl = (string) => {
+    try {
+      const url = new URL(string);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch (_) {
+      return false;
+    }
+  };
+
+  // Handle search input change and detect URLs
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+  };
+
+  // Handle search execution (button click or Enter key)
+  const handleSearch = () => {
+    const value = searchInput.trim();
+    
+    // Show modal if any text is present
+    if (value) {
+      setDetectedUrl(value);
+      setShowUrlModal(true);
+      handleUrlScrape(value);
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // Mock function to scrape product data from URL
+  const handleUrlScrape = async (url) => {
+    setIsLoadingScrape(true);
+    setScrapeError(null);
+    setScrapedProducts([]);
+
+    try {
+      // Simulate API call to scrape the URL
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock scraped data
+      const platform = url.includes('amazon') ? 'Amazon' : url.includes('flipkart') ? 'Flipkart' : url.includes('myntra') ? 'Myntra' : 'Unknown Platform';
+      
+      const mockProducts = [
+        {
+          id: Date.now() + 1,
+          name: "Premium Wireless Headphones",
+          brand: "Sony",
+          platform: platform,
+          price: 24999,
+          originalPrice: 29999,
+          image: "https://m.media-amazon.com/images/I/51432EoghOL._SX522_.jpg",
+          rating: 4.8,
+          reviews: 1523,
+          category: "Electronics",
+          url: url
+        },
+        {
+          id: Date.now() + 2,
+          name: "Smart Watch Series 8",
+          brand: "Apple",
+          platform: platform,
+          price: 45999,
+          originalPrice: 52999,
+          image: "https://m.media-amazon.com/images/I/71xb2xkN5qL._SX679_.jpg",
+          rating: 4.6,
+          reviews: 892,
+          category: "Electronics",
+          url: url
+        },
+        {
+          id: Date.now() + 3,
+          name: "Running Shoes Pro",
+          brand: "Nike",
+          platform: platform,
+          price: 8999,
+          originalPrice: 12999,
+          image: "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/22a9856e-fb88-45df-8b64-9c35910cb7c1/jumpman-mvp-shoes-JV1HCs.png",
+          rating: 4.5,
+          reviews: 567,
+          category: "Fashion",
+          url: url
+        },
+        {
+          id: Date.now() + 4,
+          name: "4K Ultra HD Smart TV 55\"",
+          brand: "Samsung",
+          platform: platform,
+          price: 54999,
+          originalPrice: 64999,
+          image: "https://img-prd-pim.poorvika.com/cdn-cgi/image/width=1600,height=1600,quality=75/product/samsung-4k-ultra-hd-led-smart-tv-du7000-55-inch-front-view.png",
+          rating: 4.7,
+          reviews: 2341,
+          category: "Electronics",
+          url: url
+        },
+        {
+          id: Date.now() + 5,
+          name: "Premium Leather Backpack",
+          brand: "Wildcraft",
+          platform: platform,
+          price: 3499,
+          originalPrice: 4999,
+          image: "https://m.media-amazon.com/images/I/81VF3W5HFZL._SY741_.jpg",
+          rating: 4.4,
+          reviews: 423,
+          category: "Fashion",
+          url: url
+        }
+      ];
+      
+      setScrapedProducts(mockProducts);
+    } catch (error) {
+      console.error("Error scraping URL:", error);
+      setScrapeError("Failed to extract product information from URL. Please try again.");
+    } finally {
+      setIsLoadingScrape(false);
+    }
+  };
+
+  // Handle adding product to tracked list
+  const handleAddProduct = (product) => {
+    // In a real app, you'd save this to your backend
+    console.log("Adding product to track:", product);
+    alert(`Product "${product.name}" added to tracking!`);
+    handleCloseModal();
+  };
+
+  // Close modal and reset
+  const handleCloseModal = () => {
+    setShowUrlModal(false);
+    setSearchInput("");
+    setDetectedUrl("");
+    setScrapedProducts([]);
+    setScrapeError(null);
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -122,7 +280,10 @@ function DashboardLayout({ children }) {
         {/* Navigation Items */}
         <nav className="flex-1 px-4 py-6 space-y-2">
           <button
-            onClick={() => setActiveTab("home")}
+            onClick={() => {
+              setActiveTab('home');
+              navigate('/dashboard');
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 font-bold transition-colors hover:cursor-pointer ${
               activeTab === "home"
                 ? "bg-black text-white"
@@ -146,11 +307,14 @@ function DashboardLayout({ children }) {
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
             </svg>
-            <span>Schedule</span>
+            <span>Chat</span>
           </button>
 
           <button
-            onClick={() => setActiveTab("trackers")}
+            onClick={() => {
+              setActiveTab('trackers');
+              navigate('/trackers');
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 font-bold transition-colors hover:cursor-pointer ${
               activeTab === "trackers"
                 ? "bg-black text-white"
@@ -232,15 +396,26 @@ function DashboardLayout({ children }) {
         {/* Top Bar with Search */}
         {/* bg-[#E8F4F1] */}
         <div className="bg-[#6b9b8e] border-b-4 border-black px-6 py-4 flex items-center gap-4">
-          <div className="flex-1 max-w-2xl relative">
-            <input
-              type="text"
-              placeholder="Search products, categories, or deals..."
-              className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-gray-800 font-medium placeholder-gray-500 focus:outline-none focus:border-[#6B9B8E]"
-            />
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-            </svg>
+          <div className="flex-1 max-w-2xl flex items-center gap-2">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={handleSearchChange}
+                onKeyPress={handleKeyPress}
+                placeholder="Search products, categories, or paste product URL..."
+                className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-gray-800 font-medium placeholder-gray-500 focus:outline-none focus:border-[#6B9B8E]"
+              />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+            </div>
+            <button 
+              onClick={handleSearch}
+              className="px-6 py-2 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:cursor-pointer whitespace-nowrap"
+            >
+              Search
+            </button>
           </div>
           <button className="p-2 bg-white border-2 border-black hover:bg-gray-100 transition-colors hover:cursor-pointer">
             <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -254,6 +429,144 @@ function DashboardLayout({ children }) {
           {children}
         </div>
       </main>
+
+      {/* URL Modal Popup */}
+      {showUrlModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-4 border-black max-w-2xl w-full max-h-[90vh] flex flex-col drop-shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+            {/* Modal Header */}
+            <div className="bg-[#6B9B8E] border-b-4 border-black p-4 flex items-center justify-between shrink-0">
+              <h2 className="text-2xl font-bold text-black">Product URL Detected</h2>
+              <button
+                onClick={handleCloseModal}
+                className="w-8 h-8 bg-black text-white hover:cursor-pointer hover:bg-red-600 transition-colors flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 flex-1 overflow-hidden flex flex-col">
+              {/* URL Display */}
+              <div className="mb-6 shrink-0">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Detected URL:</label>
+                <div className="p-3 bg-gray-100 border-2 border-gray-300 break-all text-sm">
+                  {detectedUrl}
+                </div>
+              </div>
+
+              {/* Loading State */}
+              {isLoadingScrape && (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-12 h-12 border-t-4 border-b-4 border-[#6B9B8E] mx-auto mb-4"></div>
+                  <p className="text-[#6B9B8E] font-semibold">Extracting product information...</p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {scrapeError && (
+                <div className="bg-red-100 border-2 border-red-500 p-4 mb-4 shrink-0">
+                  <p className="text-red-700 font-medium">{scrapeError}</p>
+                  <button
+                    onClick={() => handleUrlScrape(detectedUrl)}
+                    className="mt-2 px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition-colors border-2 border-black"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Products List */}
+              {!isLoadingScrape && scrapedProducts.length > 0 && (
+                <div className="flex flex-col flex-1 overflow-hidden">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 shrink-0">Found Products:</h3>
+                  <div className="space-y-4 overflow-y-auto pr-2">
+                    {scrapedProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="border-3 border-black p-4 bg-white drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+                      >
+                        <div className="flex gap-4">
+                          {/* Product Image */}
+                          <div className="w-24 h-24 bg-gray-100 border-2 border-black flex items-center justify-center shrink-0">
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                              </svg>
+                            )}
+                          </div>
+
+                          {/* Product Details */}
+                          <div className="flex-1">
+                            <h4 className="text-lg font-bold text-gray-800 mb-1">{product.name}</h4>
+                            <p className="text-sm text-gray-600 mb-2">
+                              {product.brand} • {product.platform}
+                            </p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-2xl font-bold text-gray-800">
+                                ₹{product.price.toLocaleString()}
+                              </span>
+                              {product.originalPrice > product.price && (
+                                <span className="text-sm text-gray-400 line-through">
+                                  ₹{product.originalPrice.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <span>⭐ {product.rating}</span>
+                              <span>•</span>
+                              <span>{product.reviews.toLocaleString()} reviews</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="mt-4 flex gap-3">
+                          <button
+                            onClick={() => handleAddProduct(product)}
+                            className="flex-1 py-2 px-4 bg-[#6B9B8E] text-white font-bold hover:bg-[#5A8A7D] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+                          >
+                            Track This Product
+                          </button>
+                          <button
+                            onClick={() => window.open(product.url, '_blank')}
+                            className="py-2 px-4 bg-white text-gray-800 font-bold hover:bg-gray-100 transition-colors border-2 border-black"
+                          >
+                            View Original
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!isLoadingScrape && !scrapeError && scrapedProducts.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No products found from this URL.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t-4 border-black p-4 bg-gray-50 flex-shrink-0">
+              <button
+                onClick={handleCloseModal}
+                className="w-full py-2 px-4 bg-black text-white font-bold hover:bg-gray-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

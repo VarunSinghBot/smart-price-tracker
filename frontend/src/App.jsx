@@ -10,6 +10,7 @@ import Signup from './components/auth/Signup'
 import AuthLayout from './components/auth/AuthLayout'
 import AuthCallback from './components/auth/AuthCallback'
 import Dashboard from './pages/Dashboard'
+import Trackers from './pages/Trackers'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Contact from './pages/Contact'
@@ -34,6 +35,9 @@ function App() {
         
         {/* Dashboard - Protected */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        
+        {/* Trackers - Protected */}
+        <Route path="/trackers" element={<ProtectedRoute><Trackers /></ProtectedRoute>} />
         
         {/* Legal Pages */}
         <Route path="/terms" element={<Terms />} />

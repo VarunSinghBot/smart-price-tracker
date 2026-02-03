@@ -18,7 +18,7 @@ model User {
   password   String?  // nullable for OAuth users
   googleId   String?  @unique
   username   String?  @unique  // optional username, unique if provided, needs to be checked for availability
-  name       String?  // real name for display
+  name       String?  // real name
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }

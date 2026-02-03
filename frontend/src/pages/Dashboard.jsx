@@ -1,9 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 
 function Dashboard() {
   // Selected product state
   const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  // Tracked products state
+  const [trackedProducts, setTrackedProducts] = useState([]);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  // Load tracked products from localStorage on mount
+  useEffect(() => {
+    const savedTrackedProducts = localStorage.getItem('trackedProducts');
+    if (savedTrackedProducts) {
+      try {
+        setTrackedProducts(JSON.parse(savedTrackedProducts));
+      } catch (error) {
+        console.error('Error loading tracked products:', error);
+      }
+    }
+  }, []);
+
+  // Function to add product to tracker
+  const handleSetPriceAlert = (product) => {
+    // Check if product is already tracked
+    const isAlreadyTracked = trackedProducts.some(p => p.id === product.id);
+    
+    if (isAlreadyTracked) {
+      alert('This product is already being tracked!');
+      return;
+    }
+
+    // Add tracking timestamp and alert settings
+    const trackedProduct = {
+      ...product,
+      trackedAt: new Date().toISOString(),
+      alertPrice: product.price * 0.9, // Default: alert when price drops 10%
+      isActive: true
+    };
+
+    const updatedTrackedProducts = [...trackedProducts, trackedProduct];
+    setTrackedProducts(updatedTrackedProducts);
+    
+    // Save to localStorage
+    localStorage.setItem('trackedProducts', JSON.stringify(updatedTrackedProducts));
+    
+    // Show success message
+    setShowSuccessMessage(true);
+    setTimeout(() => setShowSuccessMessage(false), 3000);
+    
+    console.log('Product added to tracker:', trackedProduct);
+  };
 
   // Mock data for dashboard with product images
   const [dashboardData] = useState({
@@ -163,10 +210,22 @@ function Dashboard() {
 
   return (
     <DashboardLayout>
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className="fixed top-20 right-8 z-50 bg-green-500 border-4 border-black text-white px-6 py-4 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] animate-bounce">
+          <div className="flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-bold">Product added to tracker!</span>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">
-          Welcome back, {user?.name || user?.username || "User"}! 👋
+          Welcome back, {user?.name || user?.username || "User"}!
         </h1>
         <p className="text-xl text-[#6B9B8E] font-semibold">
           You've saved ₹{dashboardData.totalSavings.toLocaleString()} so far!
@@ -184,7 +243,7 @@ function Dashboard() {
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold text-gray-800">{dashboardData.productsTracked}</p>
+            <p className="text-4xl font-bold text-gray-800">{trackedProducts.length}</p>
           </div>
 
           <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-all">
@@ -297,8 +356,11 @@ function Dashboard() {
                     Platform: {selectedProduct.platform}
                   </p>
                   
-                  <button className="w-full py-3 bg-white border-2 border-[#6B9B8E] text-gray-800 font-medium mb-3 hover:bg-gray-50 transition-colors hover:cursor-pointer">
-                    Set Price Alert
+                  <button 
+                    onClick={() => handleSetPriceAlert(selectedProduct)}
+                    className="w-full py-3 bg-white border-2 border-[#6B9B8E] text-gray-800 font-medium mb-3 hover:bg-gray-50 transition-colors hover:cursor-pointer"
+                  >
+                    📌 Set Price Alert
                   </button>
                   <button className="w-full py-3 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors flex items-center justify-center gap-2 hover:cursor-pointer border-2 border-black">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
