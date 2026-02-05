@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { showSuccessToast, showWarningToast } from "../components/ui/Toast";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
@@ -155,10 +156,48 @@ function DashboardLayout({ children }) {
 
   // Handle adding product to tracked list
   const handleAddProduct = (product) => {
-    // In a real app, you'd save this to your backend
-    console.log("Adding product to track:", product);
-    alert(`Product "${product.name}" added to tracking!`);
-    handleCloseModal();
+    // Get existing tracked products from localStorage
+    const savedTrackedProducts = localStorage.getItem('trackedProducts');
+    let trackedProducts = [];
+    
+    if (savedTrackedProducts) {
+      try {
+        trackedProducts = JSON.parse(savedTrackedProducts);
+      } catch (error) {
+        console.error('Error loading tracked products:', error);
+      }
+    }
+    
+    // Check if product is already tracked
+    const isAlreadyTracked = trackedProducts.some(p => p.id === product.id);
+    
+    if (isAlreadyTracked) {
+      showWarningToast('This product is already being tracked!');
+      return;
+    }
+    
+    // Add tracking timestamp and alert settings
+    const trackedProduct = {
+      ...product,
+      trackedAt: new Date().toISOString(),
+      alertPrice: product.price * 0.9, // Default: alert when price drops 10%
+      isActive: true
+    };
+    
+    const updatedTrackedProducts = [...trackedProducts, trackedProduct];
+    
+    // Save to localStorage
+    localStorage.setItem('trackedProducts', JSON.stringify(updatedTrackedProducts));
+    
+    // Show success toast
+    showSuccessToast(`${product.name} added to tracker! You'll be notified when price drops.`);
+    
+    console.log('Product added to tracker:', trackedProduct);
+    
+    // Close modal after a short delay to let user see the toast
+    setTimeout(() => {
+      handleCloseModal();
+    }, 500);
   };
 
   // Close modal and reset
@@ -312,7 +351,7 @@ function DashboardLayout({ children }) {
             }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3a48.667 48.667 0 0 1-5.5 0l-3 3v-3.09c-.34-.021-.68-.046-1.02-.073C4.097 17.07 3.25 16.105 3.25 14.97v-4.286c0-.97.616-1.813 1.5-2.097m17.5 0c0 .621-.504 1.125-1.125 1.125h-17.25A1.125 1.125 0 0 1 2.75 8.511m19.5 0V5.625c0-.621-.504-1.125-1.125-1.125H2.875A1.125 1.125 0 0 0 1.75 5.625v2.886" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
             </svg>
             <span>Chat</span>
           </button>

@@ -5,10 +5,15 @@ import { showSuccessToast, showWarningToast, showInfoToast } from "../components
 function Dashboard() {
   // Selected product state
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
   
   // Tracked products state
   const [trackedProducts, setTrackedProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('Everything');
+  
+  // Pagination states
+  const [displayedPopularCount, setDisplayedPopularCount] = useState(6);
+  const [displayedRecommendedCount, setDisplayedRecommendedCount] = useState(8);
 
   // Load tracked products from localStorage on mount
   useEffect(() => {
@@ -167,6 +172,102 @@ function Dashboard() {
         format: "Physical",
         description: "Professional mirrorless camera with exceptional image quality and advanced autofocus. Perfect for photography enthusiasts."
       },
+      { 
+        id: 21,
+        name: "LG 65\" OLED TV", 
+        brand: "LG",
+        platform: "Croma", 
+        price: 129999, 
+        originalPrice: 149999,
+        status: "dropped", 
+        change: -13,
+        image: null,
+        rating: 4.6,
+        reviews: 892,
+        category: "Electronics",
+        format: "Physical",
+        description: "Stunning OLED display with perfect blacks and infinite contrast. Ideal for movie enthusiasts and gamers."
+      },
+      { 
+        id: 22,
+        name: "Boat Airdopes 141", 
+        brand: "Boat",
+        platform: "Flipkart", 
+        price: 1299, 
+        originalPrice: 2999,
+        status: "dropped", 
+        change: -57,
+        image: null,
+        rating: 4.0,
+        reviews: 4521,
+        category: "Electronics",
+        format: "Physical",
+        description: "Affordable wireless earbuds with decent sound quality and long battery life."
+      },
+      { 
+        id: 23,
+        name: "Levi's Jeans", 
+        brand: "Levi's",
+        platform: "Myntra", 
+        price: 2499, 
+        originalPrice: 3999,
+        status: "dropped", 
+        change: -38,
+        image: null,
+        rating: 4.4,
+        reviews: 1234,
+        category: "Fashion",
+        format: "Physical",
+        description: "Classic denim with perfect fit and durability. A wardrobe essential for any style."
+      },
+      { 
+        id: 24,
+        name: "PlayStation 5 Controller", 
+        brand: "Sony",
+        platform: "Amazon", 
+        price: 5999, 
+        originalPrice: 5999,
+        status: "no-change", 
+        change: 0,
+        image: null,
+        rating: 4.7,
+        reviews: 2156,
+        category: "Electronics",
+        format: "Physical",
+        description: "DualSense wireless controller with haptic feedback and adaptive triggers for immersive gaming."
+      },
+      { 
+        id: 25,
+        name: "Ray-Ban Aviator", 
+        brand: "Ray-Ban",
+        platform: "Amazon", 
+        price: 6999, 
+        originalPrice: 8999,
+        status: "dropped", 
+        change: -22,
+        image: null,
+        rating: 4.5,
+        reviews: 3421,
+        category: "Fashion",
+        format: "Physical",
+        description: "Iconic aviator sunglasses with UV protection and timeless style."
+      },
+      { 
+        id: 26,
+        name: "Dell Monitor 27\"", 
+        brand: "Dell",
+        platform: "Flipkart", 
+        price: 18999, 
+        originalPrice: 18999,
+        status: "alert", 
+        change: 0,
+        image: null,
+        rating: 4.3,
+        reviews: 756,
+        category: "Electronics",
+        format: "Physical",
+        description: "Full HD monitor with excellent color accuracy. Perfect for work and entertainment."
+      },
     ],
     recommendedProducts: [
       { id: 7, name: "Samsung TV 43\"", brand: "Samsung", price: 34999, image: null, category: "Electronics" },
@@ -183,6 +284,18 @@ function Dashboard() {
       { id: 18, name: "Blender", brand: "Prestige", price: 2499, image: null, category: "Home & Kitchen" },
       { id: 19, name: "Yoga Mat", brand: "Decathlon", price: 799, image: null, category: "Sports" },
       { id: 20, name: "Dumbbells Set", brand: "Kore", price: 2999, image: null, category: "Sports" },
+      { id: 27, name: "HP Laptop 15.6\"", brand: "HP", price: 45999, image: null, category: "Electronics" },
+      { id: 28, name: "Reebok Sneakers", brand: "Reebok", price: 3499, image: null, category: "Fashion" },
+      { id: 29, name: "Fire TV Stick", brand: "Amazon", price: 3999, image: null, category: "Electronics" },
+      { id: 30, name: "Echo Dot 4th Gen", brand: "Amazon", price: 4499, image: null, category: "Electronics" },
+      { id: 31, name: "Wireless Mouse", brand: "Logitech", price: 1299, image: null, category: "Electronics" },
+      { id: 32, name: "Mechanical Keyboard", brand: "Cosmic Byte", price: 2499, image: null, category: "Electronics" },
+      { id: 33, name: "T-Shirt Pack of 3", brand: "H&M", price: 1499, image: null, category: "Fashion" },
+      { id: 34, name: "Sports Watch", brand: "Fastrack", price: 2999, image: null, category: "Fashion" },
+      { id: 35, name: "Air Purifier", brand: "Mi", price: 8999, image: null, category: "Home & Kitchen" },
+      { id: 36, name: "Mixer Grinder", brand: "Bajaj", price: 3499, image: null, category: "Home & Kitchen" },
+      { id: 37, name: "Resistance Bands", brand: "Boldfit", price: 499, image: null, category: "Sports" },
+      { id: 38, name: "Protein Shaker", brand: "Boldfit", price: 299, image: null, category: "Sports" },
     ],
     categoryBreakdown: [
       { category: "Electronics", percentage: 45, color: "#A855F7" },
@@ -211,7 +324,11 @@ function Dashboard() {
 
   // Handle product click
   const handleProductClick = (product) => {
-    setSelectedProduct(product);
+    setIsAnimating(true);
+    setTimeout(() => {
+      setSelectedProduct(product);
+      setIsAnimating(false);
+    }, 250);
   };
 
   // Filter recommended products by category
@@ -225,6 +342,16 @@ function Dashboard() {
   // Handle category selection
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
+    setDisplayedRecommendedCount(8); // Reset to initial count when changing category
+  };
+
+  // Handle load more
+  const handleLoadMorePopular = () => {
+    setDisplayedPopularCount(prev => prev + 6);
+  };
+
+  const handleLoadMoreRecommended = () => {
+    setDisplayedRecommendedCount(prev => prev + 8);
   };
 
   return (
@@ -296,14 +423,16 @@ function Dashboard() {
           <div className="lg:col-span-2 bg-white border-4 border-black p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold text-gray-800">Popular Products</h3>
-              <button className="text-[#6B9B8E] hover:text-[#5A8A7D] font-medium text-sm hover:cursor-pointer">more</button>
+              <span className="text-sm text-gray-600">
+                Showing {Math.min(displayedPopularCount, dashboardData.popularProducts.length)} of {dashboardData.popularProducts.length}
+              </span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {dashboardData.popularProducts.map((product) => (
+              {dashboardData.popularProducts.slice(0, displayedPopularCount).map((product) => (
                 <div 
                   key={product.id} 
                   onClick={() => handleProductClick(product)}
-                  className={`border-3 ${selectedProduct?.id === product.id ? 'border-[#6B9B8E]' : 'border-black'} overflow-hidden hover:border-[rgb(107,155,142)] transition-all cursor-pointer group drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(107,155,142,1)]`}
+                  className={`border-3 overflow-hidden hover:border-[rgb(244,164,96)] transition-all cursor-pointer group drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(244,164,96,1)]`}
                 >
                   <div className="aspect-3/4 bg-gray-100 flex items-center justify-center relative">
                     {product.image ? (
@@ -343,12 +472,22 @@ function Dashboard() {
                 </div>
               ))}
             </div>
+            {displayedPopularCount < dashboardData.popularProducts.length && (
+              <div className="mt-6 flex justify-center">
+                <button 
+                  onClick={handleLoadMorePopular}
+                  className="px-6 py-3 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-colors drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:cursor-pointer"
+                >
+                  Load More Products
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Product Details Sidebar */}
           <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
             {selectedProduct ? (
-              <>
+              <div className={`transition-all duration-500 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
                 <div className="mb-6">
                   <div className="aspect-square bg-[#F4DFC8] mb-4 flex items-center justify-center border-2 border-black overflow-hidden">
                     {selectedProduct.image ? (
@@ -413,7 +552,7 @@ function Dashboard() {
                     {selectedProduct.description}
                   </p>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400">
                 <p>Select a product to view details</p>
@@ -433,7 +572,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Everything'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Everything
@@ -443,7 +582,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Electronics'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Electronics
@@ -453,7 +592,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Fashion'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Fashion
@@ -463,7 +602,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Magazines'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Magazines
@@ -473,7 +612,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Home & Kitchen'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Home & Kitchen
@@ -483,7 +622,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Sports'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Sports
@@ -493,7 +632,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
                   selectedCategory === 'Comics'
                     ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
                 } hover:cursor-pointer`}
               >
                 Comics
@@ -505,15 +644,18 @@ function Dashboard() {
           <div className="order-2 lg:order-1 lg:col-span-2 bg-white border-4 border-black p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold text-gray-800">Recommended Products</h3>
-              <button className="text-[#6B9B8E] hover:text-[#5A8A7D] font-medium text-sm hover:cursor-pointer">more</button>
+              <span className="text-sm text-gray-600">
+                Showing {Math.min(displayedRecommendedCount, getFilteredProducts().length)} of {getFilteredProducts().length}
+              </span>
             </div>
             {getFilteredProducts().length > 0 ? (
+              <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {getFilteredProducts().map((product) => (
+                {getFilteredProducts().slice(0, displayedRecommendedCount).map((product) => (
                   <div 
                     key={product.id} 
                     // onClick={() => handleProductClick(product)}
-                    className="border-3 border-black overflow-hidden hover:border-[#6B9B8E] transition-colors cursor-pointer drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]"
+                    className="border-3 border-black overflow-hidden hover:border-[#F4A460] transition-colors cursor-pointer drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(244,164,96,1)]"
                   >
                     <div className="aspect-3/4 bg-gray-100 flex items-center justify-center">
                       {product.image ? (
@@ -530,6 +672,17 @@ function Dashboard() {
                   </div>
                 ))}
               </div>
+              {displayedRecommendedCount < getFilteredProducts().length && (
+                <div className="mt-6 flex justify-center">
+                  <button 
+                    onClick={handleLoadMoreRecommended}
+                    className="px-6 py-3 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-colors drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:cursor-pointer"
+                  >
+                    Load More Recommendations
+                  </button>
+                </div>
+              )}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

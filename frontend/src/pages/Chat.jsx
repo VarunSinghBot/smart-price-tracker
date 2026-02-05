@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
 
 function Chat() {
@@ -13,6 +13,48 @@ function Chat() {
   const [inputMessage, setInputMessage] = useState("");
   const [selectedChat, setSelectedChat] = useState("ai-assistant");
   const [chatCount, setChatCount] = useState(5);
+  const [showNewMessageAlert, setShowNewMessageAlert] = useState(false);
+  const [isUserAtBottom, setIsUserAtBottom] = useState(true);
+  
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+
+  // Check if user is at bottom of chat
+  const checkIfAtBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    
+    const threshold = 100; // pixels from bottom
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    setIsUserAtBottom(isAtBottom);
+    return isAtBottom;
+  };
+
+  // Scroll to bottom of chat
+  const scrollToBottom = (behavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+    setShowNewMessageAlert(false);
+  };
+
+  // Handle scroll event
+  const handleScroll = () => {
+    checkIfAtBottom();
+  };
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    if (isUserAtBottom) {
+      scrollToBottom("smooth");
+    } else {
+      // Show notification if user scrolled up and new message arrives
+      setShowNewMessageAlert(true);
+    }
+  }, [messages]);
+
+  // Initial scroll to bottom
+  useEffect(() => {
+    scrollToBottom("auto");
+  }, [selectedChat]);
 
   // Mock chat list
   const chats = [
@@ -60,6 +102,10 @@ function Chat() {
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
+
+    // Mark user as at bottom when they send a message
+    setIsUserAtBottom(true);
+    setShowNewMessageAlert(false);
 
     // Add user message
     const userMessage = {
@@ -112,6 +158,8 @@ function Chat() {
         timestamp: new Date().toISOString()
       }
     ]);
+    setIsUserAtBottom(true);
+    setShowNewMessageAlert(false);
   };
 
   const currentChat = chats.find(chat => chat.id === selectedChat);
@@ -121,7 +169,7 @@ function Chat() {
       {/* Main Chat Container with Sidebar */}
       <div className="flex gap-4 h-[calc(100vh-200px)] md:h-[calc(100vh-180px)]">
         {/* Left Sidebar - Chat List */}
-        <div className="hidden md:block w-80 bg-white border-4 border-black drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col">
+        <div className="hidden md:flex w-80 bg-white border-4 border-black drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] flex-col">
           {/* Sidebar Header */}
           <div className="bg-[#6B9B8E] border-b-4 border-black p-4">
             <h3 className="text-lg font-bold text-black">Chats</h3>
@@ -137,7 +185,7 @@ function Chat() {
           </div>
 
           {/* Chat List */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             {chats.map((chat) => (
               <button
                 key={chat.id}
@@ -170,15 +218,15 @@ function Chat() {
           </div>
 
           {/* New Chat Button */}
-          <div className="p-3 border-t-4 border-black">
+          <div className="p-4 border-t-4 border-black bg-white">
             <button 
               onClick={handleNewChat}
-              className="w-full px-4 py-2 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-colors drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-colors drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              New Chat
+              <span className="leading-none">New Chat</span>
             </button>
           </div>
         </div>
@@ -201,7 +249,11 @@ function Chat() {
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#E8DCC4]">
+          <div 
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#E8DCC4] custom-scrollbar relative"
+          >
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -221,6 +273,22 @@ function Chat() {
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
+            
+            {/* New Message Alert */}
+            {showNewMessageAlert && !isUserAtBottom && (
+              <div className="sticky bottom-4 left-0 right-0 flex justify-center z-10 pointer-events-none">
+                <button
+                  onClick={scrollToBottom}
+                  className="pointer-events-auto px-4 py-2 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-all drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] flex items-center gap-2 animate-bounce"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span>New Message</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Input Area */}
