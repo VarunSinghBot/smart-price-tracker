@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
+import { showSuccessToast, showWarningToast, showInfoToast } from "../components/ui/Toast";
+import { useConfirmDialog } from "../components/ui/ConfirmDialog";
 
 function Trackers() {
+  const { confirm, ConfirmDialogComponent } = useConfirmDialog();
   const [trackedProducts, setTrackedProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -24,8 +27,17 @@ function Trackers() {
   };
 
   // Remove product from tracking
-  const handleRemoveProduct = (productId) => {
-    const confirmed = window.confirm('Are you sure you want to stop tracking this product?');
+  const handleRemoveProduct = async (productId) => {
+    const productToRemove = trackedProducts.find(p => p.id === productId);
+    const confirmed = await confirm({
+      title: 'Stop Tracking Product?',
+      message: `Are you sure you want to stop tracking "${productToRemove?.name}"? You won't receive price alerts for this product anymore.`,
+      confirmText: 'Remove',
+      cancelText: 'Keep Tracking',
+      confirmButtonColor: 'bg-red-500',
+      confirmButtonHoverColor: 'hover:bg-red-600'
+    });
+    
     if (confirmed) {
       const updatedProducts = trackedProducts.filter(p => p.id !== productId);
       setTrackedProducts(updatedProducts);
@@ -33,6 +45,7 @@ function Trackers() {
       if (selectedProduct?.id === productId) {
         setSelectedProduct(null);
       }
+      showSuccessToast(`${productToRemove?.name || 'Product'} removed from tracking`);
     }
   };
 
@@ -53,16 +66,24 @@ function Trackers() {
     setTrackedProducts(updatedProducts);
     localStorage.setItem('trackedProducts', JSON.stringify(updatedProducts));
     setShowEditModal(false);
+    showSuccessToast(`Price alert updated to ₹${parseFloat(editingAlertPrice).toLocaleString()} for ${selectedProduct.name}`);
     setSelectedProduct(null);
   };
 
   // Toggle active status
   const handleToggleActive = (productId) => {
+    const product = trackedProducts.find(p => p.id === productId);
     const updatedProducts = trackedProducts.map(p => 
       p.id === productId ? { ...p, isActive: !p.isActive } : p
     );
     setTrackedProducts(updatedProducts);
     localStorage.setItem('trackedProducts', JSON.stringify(updatedProducts));
+    
+    if (product?.isActive) {
+      showInfoToast(`${product.name} tracking paused`);
+    } else {
+      showSuccessToast(`${product.name} tracking activated`);
+    }
   };
 
   // Calculate price drop percentage
@@ -79,6 +100,7 @@ function Trackers() {
 
   return (
     <DashboardLayout>
+      <ConfirmDialogComponent />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Price Trackers</h1>

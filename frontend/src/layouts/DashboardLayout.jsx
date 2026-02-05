@@ -21,6 +21,10 @@ function DashboardLayout({ children }) {
       setActiveTab('home');
     } else if (location.pathname === '/trackers') {
       setActiveTab('trackers');
+    } else if (location.pathname === '/chat') {
+      setActiveTab('schedule');
+    } else if (location.pathname === '/library') {
+      setActiveTab('library');
     }
   }, [location.pathname]);
 
@@ -251,8 +255,8 @@ function DashboardLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-[#E8DCC4] flex overflow-hidden">
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-[#6B9B8E] flex flex-col border-r-4 border-black z-40">
+      {/* Sidebar - Hidden on mobile */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-[#6B9B8E] flex-col border-r-4 border-black z-40">
         {/* Logo/Brand */}
         <div className="p-6 border-b-2 border-black">
           <div className="flex items-center gap-3">
@@ -297,7 +301,10 @@ function DashboardLayout({ children }) {
           </button>
 
           <button
-            onClick={() => setActiveTab("schedule")}
+            onClick={() => {
+              setActiveTab('schedule');
+              navigate('/chat');
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 font-bold transition-colors hover:cursor-pointer ${
               activeTab === "schedule"
                 ? "bg-black text-white"
@@ -305,7 +312,7 @@ function DashboardLayout({ children }) {
             }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3a48.667 48.667 0 0 1-5.5 0l-3 3v-3.09c-.34-.021-.68-.046-1.02-.073C4.097 17.07 3.25 16.105 3.25 14.97v-4.286c0-.97.616-1.813 1.5-2.097m17.5 0c0 .621-.504 1.125-1.125 1.125h-17.25A1.125 1.125 0 0 1 2.75 8.511m19.5 0V5.625c0-.621-.504-1.125-1.125-1.125H2.875A1.125 1.125 0 0 0 1.75 5.625v2.886" />
             </svg>
             <span>Chat</span>
           </button>
@@ -328,7 +335,10 @@ function DashboardLayout({ children }) {
           </button>
 
           <button
-            onClick={() => setActiveTab("library")}
+            onClick={() => {
+              setActiveTab('library');
+              navigate('/library');
+            }}
             className={`w-full flex items-center gap-3 px-4 py-3 font-bold transition-colors hover:cursor-pointer ${
               activeTab === "library"
                 ? "bg-black text-white"
@@ -392,10 +402,10 @@ function DashboardLayout({ children }) {
       </aside>
 
       {/* Main Content Area with Fixed Window */}
-      <main className="ml-64 flex-1 flex flex-col h-screen">
+      <main className="md:ml-64 flex-1 flex flex-col h-screen">
         {/* Top Bar with Search */}
         {/* bg-[#E8F4F1] */}
-        <div className="bg-[#6b9b8e] border-b-4 border-black px-6 py-4 flex items-center gap-4">
+        <div className="bg-[#6b9b8e] border-b-4 border-black px-3 md:px-6 py-3 md:py-4 flex items-center gap-2 md:gap-4">
           <div className="flex-1 max-w-2xl flex items-center gap-2">
             <div className="flex-1 relative">
               <input
@@ -403,8 +413,8 @@ function DashboardLayout({ children }) {
                 value={searchInput}
                 onChange={handleSearchChange}
                 onKeyPress={handleKeyPress}
-                placeholder="Search products, categories, or paste product URL..."
-                className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-gray-800 font-medium placeholder-gray-500 focus:outline-none focus:border-[#6B9B8E]"
+                placeholder="Search or paste URL..."
+                className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-gray-800 font-medium placeholder-gray-500 focus:outline-none focus:border-[#6B9B8E] text-sm md:text-base"
               />
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -412,12 +422,12 @@ function DashboardLayout({ children }) {
             </div>
             <button 
               onClick={handleSearch}
-              className="px-6 py-2 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:cursor-pointer whitespace-nowrap"
+              className="px-3 md:px-6 py-2 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:cursor-pointer whitespace-nowrap text-sm md:text-base"
             >
               Search
             </button>
           </div>
-          <button className="p-2 bg-white border-2 border-black hover:bg-gray-100 transition-colors hover:cursor-pointer">
+          <button className="hidden md:block p-2 bg-white border-2 border-black hover:bg-gray-100 transition-colors hover:cursor-pointer">
             <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
             </svg>
@@ -425,15 +435,79 @@ function DashboardLayout({ children }) {
         </div>
 
         {/* Scrollable Content Window */}
-        <div className="flex-1 overflow-y-auto bg-[#E8DCC4] p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto bg-[#E8DCC4] p-4 md:p-8 pb-20 md:pb-8 custom-scrollbar">
           {children}
         </div>
       </main>
 
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#6B9B8E] border-t-4 border-black z-50 flex">
+        <button
+          onClick={() => {
+            setActiveTab('home');
+            navigate('/dashboard');
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors ${
+            activeTab === "home"
+              ? "bg-black text-white"
+              : "bg-transparent text-black"
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
+          <span className="text-xs font-bold">Home</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('trackers');
+            navigate('/trackers');
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors ${
+            activeTab === "trackers"
+              ? "bg-black text-white"
+              : "bg-transparent text-black"
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+          </svg>
+          <span className="text-xs font-bold">Trackers</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab("library");
+            navigate('/library');
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors ${
+            activeTab === "library"
+              ? "bg-black text-white"
+              : "bg-transparent text-black"
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+          </svg>
+          <span className="text-xs font-bold">Library</span>
+        </button>
+
+        <button
+          onClick={handleLogout}
+          className="flex-1 flex flex-col items-center justify-center py-3 gap-1 bg-transparent text-black"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+          </svg>
+          <span className="text-xs font-bold">Logout</span>
+        </button>
+      </nav>
+
       {/* URL Modal Popup */}
       {showUrlModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border-4 border-black max-w-2xl w-full max-h-[90vh] flex flex-col drop-shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-4 border-black max-w-2xl w-full max-h-[90vh] flex flex-col drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] animate-dialog-enter">
             {/* Modal Header */}
             <div className="bg-[#6B9B8E] border-b-4 border-black p-4 flex items-center justify-between shrink-0">
               <h2 className="text-2xl font-bold text-black">Product URL Detected</h2>

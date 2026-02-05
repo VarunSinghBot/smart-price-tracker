@@ -58,53 +58,106 @@ body {
   transform: translateY(0) !important;
 }
 
+/* Custom toast animations */
+@keyframes custom-enter {
+  0% {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes custom-leave {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(120%, 0, 0);
+    opacity: 0;
+  }
+}
+
+.animate-custom-enter {
+  animation: custom-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
+.animate-custom-leave {
+  animation: custom-leave 0.3s cubic-bezier(0.06, 0.71, 0.55, 1) forwards;
+}
+
+/* Confirm Dialog animations */
+@keyframes dialog-enter {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-dialog-enter {
+  animation: dialog-enter 0.25s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+
 /* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
 }
 
-/* Custom minimal scrollbar for dashboard - matching reference design */
+/* Custom retro scrollbar - Windows 95 style */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #C0C0C0;
-  border-left: 1px solid #000000;
-  border-top: 1px solid #000000;
-  border-right: 1px solid #000000;
-  border-bottom: 1px solid #000000;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #C0C0C0;
+  background: #E8DCC4;
   background-image: 
     repeating-linear-gradient(
       45deg,
-      transparent,
-      transparent 2px,
-      #808080 2px,
-      #808080 4px
+      #E8DCC4 0px,
+      #E8DCC4 2px,
+      #D4C2A4 2px,
+      #D4C2A4 4px
     );
-  border-left: 1px solid #000000;
-  border-top: 1px solid #000000;
-  border-right: 1px solid #000000;
-  border-bottom: 1px solid #000000;
+  border: 2px solid #000000;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #F4A460;
+  border-top: 2px solid #FFD4A3;
+  border-left: 2px solid #FFD4A3;
+  border-bottom: 2px solid #8B5A2B;
+  border-right: 2px solid #8B5A2B;
+  min-height: 40px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #B0B0B0;
+  background: #E89450;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #D68A3D;
+  border-top: 2px solid #8B5A2B;
+  border-left: 2px solid #8B5A2B;
+  border-bottom: 2px solid #FFD4A3;
+  border-right: 2px solid #FFD4A3;
 }
 
 .custom-scrollbar::-webkit-scrollbar-button {
-  width: 20px;
-  height: 20px;
-  background: #C0C0C0;
-  border-left: 2px solid #000000;
-  border-top: 2px solid #000000;
-  border-right: 2px solid #000000;
-  border-bottom: 2px solid #000000;
+  width: 22px;
+  height: 22px;
+  background: #F4A460;
+  border-top: 2px solid #FFD4A3;
+  border-left: 2px solid #FFD4A3;
+  border-bottom: 2px solid #8B5A2B;
+  border-right: 2px solid #8B5A2B;
   background-repeat: no-repeat;
   background-position: center;
 }
@@ -125,17 +178,22 @@ html {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M9 6 L4 2 L4 10 Z' fill='%23000000'/%3E%3C/svg%3E");
 }
 
+.custom-scrollbar::-webkit-scrollbar-button:hover {
+  background-color: #E89450;
+}
+
 .custom-scrollbar::-webkit-scrollbar-button:active {
-  border-left: 2px solid #000000;
-  border-top: 2px solid #000000;
-  border-right: 2px solid #FFFFFF;
-  border-bottom: 2px solid #FFFFFF;
+  background: #D68A3D;
+  border-top: 2px solid #8B5A2B;
+  border-left: 2px solid #8B5A2B;
+  border-bottom: 2px solid #FFD4A3;
+  border-right: 2px solid #FFD4A3;
 }
 
 /* Firefox scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #C0C0C0 #808080;
+  scrollbar-color: #F4A460 #E8DCC4;
 }
 
 /* Old default scrollbar styles (kept for other areas) */
@@ -144,14 +202,15 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #E8DCC4;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #a855f7, #ec4899);
+  background: #F4A460;
   border-radius: 10px;
+  border: 2px solid #000000;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #9333ea, #db2777);
+  background: #E89450;
 }

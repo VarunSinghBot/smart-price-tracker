@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import GoogleSignInButton from "./GoogleSignInButton";
+import { showSuccessToast, showErrorToast } from "../ui/Toast";
 
 function Login() {
   const navigate = useNavigate();
@@ -41,12 +42,17 @@ function Login() {
       localStorage.setItem("accessToken", response.data.data.accessToken);
       localStorage.setItem("user", JSON.stringify(response.data.data.user));
 
-      // Redirect to dashboard
-      navigate("/dashboard");
+      // Show success toast
+      showSuccessToast("Login successful! Redirecting to dashboard...");
+
+      // Redirect to dashboard after a brief delay
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "An error occurred during login"
-      );
+      const errorMessage = err.response?.data?.message || "An error occurred during login";
+      setError(errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setIsLoading(false);
     }

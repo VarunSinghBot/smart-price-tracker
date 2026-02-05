@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/DashboardLayout";
+import { showSuccessToast, showWarningToast, showInfoToast } from "../components/ui/Toast";
 
 function Dashboard() {
   // Selected product state
@@ -7,7 +8,7 @@ function Dashboard() {
   
   // Tracked products state
   const [trackedProducts, setTrackedProducts] = useState([]);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Everything');
 
   // Load tracked products from localStorage on mount
   useEffect(() => {
@@ -27,7 +28,7 @@ function Dashboard() {
     const isAlreadyTracked = trackedProducts.some(p => p.id === product.id);
     
     if (isAlreadyTracked) {
-      alert('This product is already being tracked!');
+      showWarningToast('This product is already being tracked!');
       return;
     }
 
@@ -45,9 +46,8 @@ function Dashboard() {
     // Save to localStorage
     localStorage.setItem('trackedProducts', JSON.stringify(updatedTrackedProducts));
     
-    // Show success message
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 3000);
+    // Show success toast
+    showSuccessToast(`${product.name} added to tracker! You'll be notified when price drops.`);
     
     console.log('Product added to tracker:', trackedProduct);
   };
@@ -169,14 +169,20 @@ function Dashboard() {
       },
     ],
     recommendedProducts: [
-      { id: 7, name: "Samsung TV 43\"", brand: "Samsung", price: 34999, image: null },
-      { id: 8, name: "Nike Sports Shoes", brand: "Nike", price: 2999, image: null },
-      { id: 9, name: "MacBook Pro 14\"", brand: "Apple", price: 129999, image: null },
-      { id: 10, name: "AirPods Pro 2", brand: "Apple", price: 24999, image: null },
-      { id: 11, name: "iPad Air", brand: "Apple", price: 54999, image: null },
-      { id: 12, name: "PS5 Console", brand: "Sony", price: 49999, image: null },
-      { id: 13, name: "Kindle Paperwhite", brand: "Amazon", price: 12999, image: null },
-      { id: 14, name: "Dell XPS 15", brand: "Dell", price: 149999, image: null },
+      { id: 7, name: "Samsung TV 43\"", brand: "Samsung", price: 34999, image: null, category: "Electronics" },
+      { id: 8, name: "Nike Sports Shoes", brand: "Nike", price: 2999, image: null, category: "Fashion" },
+      { id: 9, name: "MacBook Pro 14\"", brand: "Apple", price: 129999, image: null, category: "Electronics" },
+      { id: 10, name: "AirPods Pro 2", brand: "Apple", price: 24999, image: null, category: "Electronics" },
+      { id: 11, name: "iPad Air", brand: "Apple", price: 54999, image: null, category: "Electronics" },
+      { id: 12, name: "PS5 Console", brand: "Sony", price: 49999, image: null, category: "Electronics" },
+      { id: 13, name: "Kindle Paperwhite", brand: "Amazon", price: 12999, image: null, category: "Electronics" },
+      { id: 14, name: "Dell XPS 15", brand: "Dell", price: 149999, image: null, category: "Electronics" },
+      { id: 15, name: "Adidas Jacket", brand: "Adidas", price: 3999, image: null, category: "Fashion" },
+      { id: 16, name: "Puma Trackpants", brand: "Puma", price: 1999, image: null, category: "Fashion" },
+      { id: 17, name: "Coffee Maker", brand: "Philips", price: 4999, image: null, category: "Home & Kitchen" },
+      { id: 18, name: "Blender", brand: "Prestige", price: 2499, image: null, category: "Home & Kitchen" },
+      { id: 19, name: "Yoga Mat", brand: "Decathlon", price: 799, image: null, category: "Sports" },
+      { id: 20, name: "Dumbbells Set", brand: "Kore", price: 2999, image: null, category: "Sports" },
     ],
     categoryBreakdown: [
       { category: "Electronics", percentage: 45, color: "#A855F7" },
@@ -208,20 +214,21 @@ function Dashboard() {
     setSelectedProduct(product);
   };
 
+  // Filter recommended products by category
+  const getFilteredProducts = () => {
+    if (selectedCategory === 'Everything') {
+      return dashboardData.recommendedProducts;
+    }
+    return dashboardData.recommendedProducts.filter(p => p.category === selectedCategory);
+  };
+
+  // Handle category selection
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+  };
+
   return (
     <DashboardLayout>
-      {/* Success Message */}
-      {showSuccessMessage && (
-        <div className="fixed top-20 right-8 z-50 bg-green-500 border-4 border-black text-white px-6 py-4 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] animate-bounce">
-          <div className="flex items-center gap-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-bold">Product added to tracker!</span>
-          </div>
-        </div>
-      )}
-
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">
@@ -417,62 +424,121 @@ function Dashboard() {
 
         {/* Bottom Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recommended Products */}
-          <div className="lg:col-span-2 bg-white border-4 border-black p-6">
+          {/* Categories - Shows first on mobile, second on desktop */}
+          <div className="order-1 lg:order-2 bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+            <h3 className="text-xl font-bold text-gray-800 mb-6">Categories</h3>
+            <div className="flex flex-wrap gap-2">
+              <button 
+                onClick={() => handleCategorySelect('Everything')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Everything'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Everything
+              </button>
+              <button 
+                onClick={() => handleCategorySelect('Electronics')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Electronics'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Electronics
+              </button>
+              <button 
+                onClick={() => handleCategorySelect('Fashion')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Fashion'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Fashion
+              </button>
+              <button 
+                onClick={() => handleCategorySelect('Magazines')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Magazines'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Magazines
+              </button>
+              <button 
+                onClick={() => handleCategorySelect('Home & Kitchen')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Home & Kitchen'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Home & Kitchen
+              </button>
+              <button 
+                onClick={() => handleCategorySelect('Sports')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Sports'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Sports
+              </button>
+              <button 
+                onClick={() => handleCategorySelect('Comics')}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
+                  selectedCategory === 'Comics'
+                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#6B9B8E]'
+                } hover:cursor-pointer`}
+              >
+                Comics
+              </button>
+            </div>
+          </div>
+
+          {/* Recommended Products - Shows second on mobile, first on desktop */}
+          <div className="order-2 lg:order-1 lg:col-span-2 bg-white border-4 border-black p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold text-gray-800">Recommended Products</h3>
               <button className="text-[#6B9B8E] hover:text-[#5A8A7D] font-medium text-sm hover:cursor-pointer">more</button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {dashboardData.recommendedProducts.map((product) => (
-                <div 
-                  key={product.id} 
-                  // onClick={() => handleProductClick(product)}
-                  className="border-3 border-black overflow-hidden hover:border-[#6B9B8E] transition-colors cursor-pointer drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]"
-                >
-                  <div className="aspect-3/4 bg-gray-100 flex items-center justify-center">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <ProductPlaceholder className="w-12 h-12" />
-                    )}
+            {getFilteredProducts().length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {getFilteredProducts().map((product) => (
+                  <div 
+                    key={product.id} 
+                    // onClick={() => handleProductClick(product)}
+                    className="border-3 border-black overflow-hidden hover:border-[#6B9B8E] transition-colors cursor-pointer drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]"
+                  >
+                    <div className="aspect-3/4 bg-gray-100 flex items-center justify-center">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
+                      ) : (
+                        <ProductPlaceholder className="w-12 h-12" />
+                      )}
+                    </div>
+                    <div className="p-2 bg-white">
+                      <h4 className="font-bold text-xs text-gray-800 truncate">{product.name}</h4>
+                      <p className="text-xs text-gray-500">{product.brand}</p>
+                      <p className="text-xs text-gray-800 font-bold mt-1">₹{product.price.toLocaleString()}</p>
+                    </div>
                   </div>
-                  <div className="p-2 bg-white">
-                    <h4 className="font-bold text-xs text-gray-800 truncate">{product.name}</h4>
-                    <p className="text-xs text-gray-500">{product.brand}</p>
-                    <p className="text-xs text-gray-800 font-bold mt-1">₹{product.price.toLocaleString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Categories</h3>
-            <div className="flex flex-wrap gap-2">
-              <button className="px-4 py-2 bg-[#F4A460] text-white text-sm font-medium hover:bg-[#E89450] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:cursor-pointer">
-                Everything
-              </button>
-              <button className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium hover:border-[#6B9B8E] transition-colors hover:cursor-pointer">
-                Electronics
-              </button>
-              <button className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium hover:border-[#6B9B8E] transition-colors hover:cursor-pointer">
-                Fashion
-              </button>
-              <button className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium hover:border-[#6B9B8E] transition-colors hover:cursor-pointer">
-                Magazines
-              </button>
-              <button className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium hover:border-[#6B9B8E] transition-colors hover:cursor-pointer">
-                Home & Kitchen
-              </button>
-              <button className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium hover:border-[#6B9B8E] transition-colors hover:cursor-pointer">
-                Sports
-              </button>
-              <button className="px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium hover:border-[#6B9B8E] transition-colors hover:cursor-pointer">
-                Comics
-              </button>
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <p className="text-gray-600 font-bold text-lg mb-1">No products found</p>
+                <p className="text-gray-500 text-sm">No recommended products available for "{selectedCategory}" category.</p>
+              </div>
+            )}
           </div>
         </div>
     </DashboardLayout>

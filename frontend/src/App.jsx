@@ -11,15 +11,19 @@ import AuthLayout from './components/auth/AuthLayout'
 import AuthCallback from './components/auth/AuthCallback'
 import Dashboard from './pages/Dashboard'
 import Trackers from './pages/Trackers'
+import Chat from './pages/Chat'
+import Library from './pages/Library'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Contact from './pages/Contact'
 import ErrPage from './ErrPage';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
+import ToastContainer from './components/ui/ToastContainer';
 
 function App() {
   return (
     <Router>
+      <ToastContainer />
       <Routes>
         {/* Landing Page */}
         <Route path="/" element={<LandingPage />} />
@@ -38,6 +42,12 @@ function App() {
         
         {/* Trackers - Protected */}
         <Route path="/trackers" element={<ProtectedRoute><Trackers /></ProtectedRoute>} />
+        
+        {/* Chat - Protected */}
+        <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        
+        {/* Library - Protected */}
+        <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         
         {/* Legal Pages */}
         <Route path="/terms" element={<Terms />} />

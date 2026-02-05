@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import GoogleSignInButton from "./GoogleSignInButton";
+import { showSuccessToast, showErrorToast, showWarningToast } from "../ui/Toast";
 
 function Signup() {
   const navigate = useNavigate();
@@ -42,13 +43,16 @@ function Signup() {
 
     // Client-side validation
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords don't match");
+      const errorMsg = "Passwords don't match";
+      setError(errorMsg);
+      showWarningToast(errorMsg);
       return;
     }
 
     const passwordError = validatePassword();
     if (passwordError) {
       setError(passwordError);
+      showWarningToast(passwordError);
       return;
     }
 
@@ -72,14 +76,19 @@ function Signup() {
       localStorage.setItem("accessToken", response.data.data.accessToken);
       localStorage.setItem("user", JSON.stringify(response.data.data.user));
 
-      // Redirect to dashboard
-      navigate("/dashboard");
+      // Show success toast
+      showSuccessToast("Account created successfully! Welcome aboard!");
+
+      // Redirect to dashboard after a brief delay
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
+      const errorMessage = err.response?.data?.message ||
           err.response?.data?.errors?.[0]?.message ||
-          "An error occurred during signup"
-      );
+          "An error occurred during signup";
+      setError(errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setIsLoading(false);
     }
