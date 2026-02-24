@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import GoogleSignInButton from "./GoogleSignInButton";
 import { showSuccessToast, showErrorToast, showWarningToast } from "../ui/Toast";
 

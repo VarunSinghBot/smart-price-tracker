@@ -1,20 +1,31 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
-import { showSuccessToast, showWarningToast } from "../components/ui/Toast";
+import { showSuccessToast, showWarningToast, showErrorToast } from "../components/ui/Toast";
+import { searchCrossPlatform, scrapeNewProduct, scrapeMultiPlatform, clearScrapedProduct } from "../store/scraperSlice";
+import { fetchProducts } from "../store/productSlice";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
+  
+  // Redux state
+  const { scrapedProduct, scrapedProducts, searchResults, scraping, searching, error: scrapeError } = useSelector((state) => state.scraper);
+  
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
   const [searchInput, setSearchInput] = useState("");
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [detectedUrl, setDetectedUrl] = useState("");
-  const [scrapedProducts, setScrapedProducts] = useState([]);
-  const [isLoadingScrape, setIsLoadingScrape] = useState(false);
-  const [scrapeError, setScrapeError] = useState(null);
+  const [multiPlatformMode, setMultiPlatformMode] = useState(false);
+  const [platformUrls, setPlatformUrls] = useState({
+    amazon: "",
+    flipkart: "",
+    ebay: ""
+  });
 
   // Sync activeTab with current route
   useEffect(() => {
@@ -46,14 +57,60 @@ function DashboardLayout({ children }) {
   };
 
   // Handle search execution (button click or Enter key)
-  const handleSearch = () => {
+  const handleSearch = async () => {
     const value = searchInput.trim();
     
-    // Show modal if any text is present
+    // Show modal and scrape if URL is provided
     if (value) {
       setDetectedUrl(value);
       setShowUrlModal(true);
-      handleUrlScrape(value);
+      setMultiPlatformMode(false);
+      
+      // Clear any previous scraped product
+      dispatch(clearScrapedProduct());
+      
+      // Search across all platforms using Redux action
+      const result = await dispatch(searchCrossPlatform({ url: value }));
+      
+      if (searchCrossPlatform.fulfilled.match(result)) {
+        showSuccessToast('Products found across platforms!');
+      } else {
+        showErrorToast(result.payload || 'Failed to search product');
+      }
+    }
+  };
+
+  // Handle multi-platform scraping
+  const handleMultiPlatformScrape = async () => {
+    const urls = Object.values(platformUrls).filter(url => url.trim());
+    
+    if (urls.length === 0) {
+      showErrorToast('Please enter at least one product URL');
+      return;
+    }
+    
+    setShowUrlModal(true);
+    dispatch(clearScrapedProduct());
+    
+    const result = await dispatch(scrapeMultiPlatform(urls));
+    
+    if (scrapeMultiPlatform.fulfilled.match(result)) {
+      showSuccessToast(`Products scraped from ${result.payload.totalScraped} platform(s)!`);
+    } else {
+      showErrorToast(result.payload || 'Failed to scrape products');
+    }
+  };
+
+  // Toggle multi-platform mode
+  const toggleMultiPlatformMode = () => {
+    setMultiPlatformMode(!multiPlatformMode);
+    if (!multiPlatformMode) {
+      // Clear single URL mode
+      setSearchInput("");
+      setDetectedUrl("");
+    } else {
+      // Clear multi-platform URLs
+      setPlatformUrls({ amazon: "", flipkart: "", ebay: "" });
     }
   };
 
@@ -64,140 +121,33 @@ function DashboardLayout({ children }) {
     }
   };
 
-  // Mock function to scrape product data from URL
-  const handleUrlScrape = async (url) => {
-    setIsLoadingScrape(true);
-    setScrapeError(null);
-    setScrapedProducts([]);
-
-    try {
-      // Simulate API call to scrape the URL
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock scraped data
-      const platform = url.includes('amazon') ? 'Amazon' : url.includes('flipkart') ? 'Flipkart' : url.includes('myntra') ? 'Myntra' : 'Unknown Platform';
-      
-      const mockProducts = [
-        {
-          id: Date.now() + 1,
-          name: "Premium Wireless Headphones",
-          brand: "Sony",
-          platform: platform,
-          price: 24999,
-          originalPrice: 29999,
-          image: "https://m.media-amazon.com/images/I/51432EoghOL._SX522_.jpg",
-          rating: 4.8,
-          reviews: 1523,
-          category: "Electronics",
-          url: url
-        },
-        {
-          id: Date.now() + 2,
-          name: "Smart Watch Series 8",
-          brand: "Apple",
-          platform: platform,
-          price: 45999,
-          originalPrice: 52999,
-          image: "https://m.media-amazon.com/images/I/71xb2xkN5qL._SX679_.jpg",
-          rating: 4.6,
-          reviews: 892,
-          category: "Electronics",
-          url: url
-        },
-        {
-          id: Date.now() + 3,
-          name: "Running Shoes Pro",
-          brand: "Nike",
-          platform: platform,
-          price: 8999,
-          originalPrice: 12999,
-          image: "https://static.nike.com/a/images/c_limit,w_592,f_auto/t_product_v1/u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/22a9856e-fb88-45df-8b64-9c35910cb7c1/jumpman-mvp-shoes-JV1HCs.png",
-          rating: 4.5,
-          reviews: 567,
-          category: "Fashion",
-          url: url
-        },
-        {
-          id: Date.now() + 4,
-          name: "4K Ultra HD Smart TV 55\"",
-          brand: "Samsung",
-          platform: platform,
-          price: 54999,
-          originalPrice: 64999,
-          image: "https://img-prd-pim.poorvika.com/cdn-cgi/image/width=1600,height=1600,quality=75/product/samsung-4k-ultra-hd-led-smart-tv-du7000-55-inch-front-view.png",
-          rating: 4.7,
-          reviews: 2341,
-          category: "Electronics",
-          url: url
-        },
-        {
-          id: Date.now() + 5,
-          name: "Premium Leather Backpack",
-          brand: "Wildcraft",
-          platform: platform,
-          price: 3499,
-          originalPrice: 4999,
-          image: "https://m.media-amazon.com/images/I/81VF3W5HFZL._SY741_.jpg",
-          rating: 4.4,
-          reviews: 423,
-          category: "Fashion",
-          url: url
-        }
-      ];
-      
-      setScrapedProducts(mockProducts);
-    } catch (error) {
-      console.error("Error scraping URL:", error);
-      setScrapeError("Failed to extract product information from URL. Please try again.");
-    } finally {
-      setIsLoadingScrape(false);
-    }
-  };
-
-  // Handle adding product to tracked list
-  const handleAddProduct = (product) => {
-    // Get existing tracked products from localStorage
-    const savedTrackedProducts = localStorage.getItem('trackedProducts');
-    let trackedProducts = [];
-    
-    if (savedTrackedProducts) {
+  // Handle adding product to tracker
+  const handleTrackProduct = async () => {
+    if (scrapedProduct && scrapedProduct.url) {
       try {
-        trackedProducts = JSON.parse(savedTrackedProducts);
+        // Save product to database
+        const result = await dispatch(scrapeNewProduct(scrapedProduct.url));
+        
+        if (result.error) {
+          showErrorToast('Failed to track product. Please try again.');
+          return;
+        }
+        
+        // Refresh products list to show the newly saved product
+        await dispatch(fetchProducts());
+        
+        showSuccessToast(`${scrapedProduct.title} is now being tracked! You'll be notified when price drops.`);
+        
+        // Close modal and navigate to trackers page
+        setTimeout(() => {
+          handleCloseModal();
+          navigate('/trackers');
+        }, 500);
       } catch (error) {
-        console.error('Error loading tracked products:', error);
+        console.error('Error tracking product:', error);
+        showErrorToast('Failed to track product. Please try again.');
       }
     }
-    
-    // Check if product is already tracked
-    const isAlreadyTracked = trackedProducts.some(p => p.id === product.id);
-    
-    if (isAlreadyTracked) {
-      showWarningToast('This product is already being tracked!');
-      return;
-    }
-    
-    // Add tracking timestamp and alert settings
-    const trackedProduct = {
-      ...product,
-      trackedAt: new Date().toISOString(),
-      alertPrice: product.price * 0.9, // Default: alert when price drops 10%
-      isActive: true
-    };
-    
-    const updatedTrackedProducts = [...trackedProducts, trackedProduct];
-    
-    // Save to localStorage
-    localStorage.setItem('trackedProducts', JSON.stringify(updatedTrackedProducts));
-    
-    // Show success toast
-    showSuccessToast(`${product.name} added to tracker! You'll be notified when price drops.`);
-    
-    console.log('Product added to tracker:', trackedProduct);
-    
-    // Close modal after a short delay to let user see the toast
-    setTimeout(() => {
-      handleCloseModal();
-    }, 500);
   };
 
   // Close modal and reset
@@ -205,8 +155,9 @@ function DashboardLayout({ children }) {
     setShowUrlModal(false);
     setSearchInput("");
     setDetectedUrl("");
-    setScrapedProducts([]);
-    setScrapeError(null);
+    setMultiPlatformMode(false);
+    setPlatformUrls({ amazon: "", flipkart: "", ebay: "" });
+    dispatch(clearScrapedProduct());
   };
 
   useEffect(() => {
@@ -233,12 +184,13 @@ function DashboardLayout({ children }) {
       // If no cached user, fetch from backend
       try {
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/v1/auth/me`,
+          '/auth/me',
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
             withCredentials: true,
+            baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
           }
         );
 
@@ -262,10 +214,11 @@ function DashboardLayout({ children }) {
   const handleLogout = async () => {
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/auth/logout`,
+        '/auth/logout',
         {},
         {
           withCredentials: true,
+          baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
         }
       );
     } catch (error) {
@@ -443,34 +396,39 @@ function DashboardLayout({ children }) {
       {/* Main Content Area with Fixed Window */}
       <main className="md:ml-64 flex-1 flex flex-col h-screen">
         {/* Top Bar with Search */}
-        {/* bg-[#E8F4F1] */}
-        <div className="bg-[#6b9b8e] border-b-4 border-black px-3 md:px-6 py-3 md:py-4 flex items-center gap-2 md:gap-4">
-          <div className="flex-1 max-w-2xl flex items-center gap-2">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={searchInput}
-                onChange={handleSearchChange}
-                onKeyPress={handleKeyPress}
-                placeholder="Search or paste URL..."
-                className="w-full pl-10 pr-4 py-2 bg-white border-2 border-black text-gray-800 font-medium placeholder-gray-500 focus:outline-none focus:border-[#6B9B8E] text-sm md:text-base"
-              />
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-              </svg>
+        <div className="bg-[#6b9b8e] border-b-[6px] border-black px-3 md:px-6 py-4 md:py-5">
+          {/* Single URL Mode - Simplified */}
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="flex-1 max-w-3xl flex items-center gap-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Search or paste URL..."
+                  className="w-full pl-12 pr-4 py-3 bg-white border-3 border-black text-gray-800 font-semibold placeholder-gray-500 focus:outline-none focus:border-[#F4A460] text-sm md:text-base drop-shadow-[3px_3px_0px_rgba(0,0,0,0.2)]"
+                />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+              </div>
+              <button 
+                onClick={handleSearch}
+                className="px-5 md:px-8 py-3 bg-[#F4A460] text-white font-bold uppercase hover:bg-[#E89450] transition-all border-3 border-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:cursor-pointer whitespace-nowrap text-sm md:text-base"
+              >
+                Search
+              </button>
+              <button 
+                className="p-3 bg-white border-3 border-black hover:bg-[#E8DCC4] transition-all drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+                title="Filter"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 text-gray-800">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
+                </svg>
+              </button>
             </div>
-            <button 
-              onClick={handleSearch}
-              className="px-3 md:px-6 py-2 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:cursor-pointer whitespace-nowrap text-sm md:text-base"
-            >
-              Search
-            </button>
           </div>
-          <button className="hidden md:block p-2 bg-white border-2 border-black hover:bg-gray-100 transition-colors hover:cursor-pointer">
-            <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" />
-            </svg>
-          </button>
         </div>
 
         {/* Scrollable Content Window */}
@@ -545,136 +503,292 @@ function DashboardLayout({ children }) {
 
       {/* URL Modal Popup */}
       {showUrlModal && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-white border-4 border-black max-w-2xl w-full max-h-[90vh] flex flex-col drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] animate-dialog-enter">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-[6px] border-black max-w-4xl w-full max-h-[92vh] flex flex-col drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] animate-dialog-enter">
             {/* Modal Header */}
-            <div className="bg-[#6B9B8E] border-b-4 border-black p-4 flex items-center justify-between shrink-0">
-              <h2 className="text-2xl font-bold text-black">Product URL Detected</h2>
+            <div className="bg-[#F4A460] border-b-[6px] border-black p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-black border-3 border-white flex items-center justify-center">
+                  <span className="text-3xl">🔍</span>
+                </div>
+                <h2 className="text-3xl font-bold text-white tracking-tight uppercase">Product Tracker</h2>
+              </div>
               <button
                 onClick={handleCloseModal}
-                className="w-8 h-8 bg-black text-white hover:cursor-pointer hover:bg-red-600 transition-colors flex items-center justify-center font-bold"
+                className="w-10 h-10 bg-black text-white hover:cursor-pointer hover:bg-red-600 transition-all border-3 border-white drop-shadow-[3px_3px_0px_rgba(0,0,0,0.5)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,0.7)] flex items-center justify-center font-bold text-xl"
               >
                 ✕
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 flex-1 overflow-hidden flex flex-col">
-              {/* URL Display */}
-              <div className="mb-6 shrink-0">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Detected URL:</label>
-                <div className="p-3 bg-gray-100 border-2 border-gray-300 break-all text-sm">
-                  {detectedUrl}
-                </div>
-              </div>
-
-              {/* Loading State */}
-              {isLoadingScrape && (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-12 h-12 border-t-4 border-b-4 border-[#6B9B8E] mx-auto mb-4"></div>
-                  <p className="text-[#6B9B8E] font-semibold">Extracting product information...</p>
-                </div>
-              )}
-
-              {/* Error State */}
-              {scrapeError && (
-                <div className="bg-red-100 border-2 border-red-500 p-4 mb-4 shrink-0">
-                  <p className="text-red-700 font-medium">{scrapeError}</p>
-                  <button
-                    onClick={() => handleUrlScrape(detectedUrl)}
-                    className="mt-2 px-4 py-2 bg-red-500 text-white font-bold hover:bg-red-600 transition-colors border-2 border-black"
-                  >
-                    Retry
-                  </button>
-                </div>
-              )}
-
-              {/* Products List */}
-              {!isLoadingScrape && scrapedProducts.length > 0 && (
-                <div className="flex flex-col flex-1 overflow-hidden">
-                  <h3 className="text-xl font-bold text-gray-800 mb-4 shrink-0">Found Products:</h3>
-                  <div className="space-y-4 overflow-y-auto pr-2">
-                    {scrapedProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="border-3 border-black p-4 bg-white drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]"
-                      >
-                        <div className="flex gap-4">
-                          {/* Product Image */}
-                          <div className="w-24 h-24 bg-gray-100 border-2 border-black flex items-center justify-center shrink-0">
-                            {product.image ? (
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-contain"
-                              />
-                            ) : (
-                              <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                              </svg>
-                            )}
-                          </div>
-
-                          {/* Product Details */}
-                          <div className="flex-1">
-                            <h4 className="text-lg font-bold text-gray-800 mb-1">{product.name}</h4>
-                            <p className="text-sm text-gray-600 mb-2">
-                              {product.brand} • {product.platform}
-                            </p>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-2xl font-bold text-gray-800">
-                                ₹{product.price.toLocaleString()}
-                              </span>
-                              {product.originalPrice > product.price && (
-                                <span className="text-sm text-gray-400 line-through">
-                                  ₹{product.originalPrice.toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <span>⭐ {product.rating}</span>
-                              <span>•</span>
-                              <span>{product.reviews.toLocaleString()} reviews</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="mt-4 flex gap-3">
-                          <button
-                            onClick={() => handleAddProduct(product)}
-                            className="flex-1 py-2 px-4 bg-[#6B9B8E] text-white font-bold hover:bg-[#5A8A7D] transition-colors border-2 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]"
-                          >
-                            Track This Product
-                          </button>
-                          <button
-                            onClick={() => window.open(product.url, '_blank')}
-                            className="py-2 px-4 bg-white text-gray-800 font-bold hover:bg-gray-100 transition-colors border-2 border-black"
-                          >
-                            View Original
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+            <div className="p-6 flex-1 overflow-y-auto">
+              {/* URL Display for Single Mode */}
+              {!multiPlatformMode && detectedUrl && (
+                <div className="mb-6">
+                  <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Detected URL:</label>
+                  <div className="p-4 bg-[#E8DCC4] border-3 border-black break-all text-sm font-mono">
+                    {detectedUrl}
                   </div>
                 </div>
               )}
 
-              {/* Empty State */}
-              {!isLoadingScrape && !scrapeError && scrapedProducts.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No products found from this URL.</p>
+              {/* Loading State */}
+              {scraping && (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 border-[6px] border-black border-t-[#6B9B8E] mx-auto mb-6 animate-spin"></div>
+                  <div className="bg-[#E8F4F1] border-3 border-black p-4 inline-block mb-4">
+                    <p className="text-[#6B9B8E] font-bold text-xl uppercase tracking-wide">Extracting Product Info...</p>
+                  </div>
+                  <p className="text-gray-600 text-sm font-semibold">This may take a few moments</p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {scrapeError && !scraping && (
+                <div className="bg-red-100 border-4 border-red-600 p-8 text-center drop-shadow-[6px_6px_0px_rgba(220,38,38,0.3)]">
+                  <div className="w-20 h-20 bg-red-600 border-3 border-black mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="bg-white border-2 border-black p-3 inline-block mb-4">
+                    <p className="text-red-700 font-bold text-xl uppercase">Scraping Failed</p>
+                  </div>
+                  <p className="text-red-800 mb-6 font-semibold">{scrapeError}</p>
+                  <button
+                    onClick={() => multiPlatformMode ? handleMultiPlatformScrape() : handleSearch()}
+                    className="px-8 py-3 bg-red-600 text-white font-bold uppercase hover:bg-red-700 transition-all border-3 border-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[5px_5px_0px_rgba(0,0,0,1)]"
+                  >
+                    ↻ Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Single Product Display with Cross-Platform Results */}
+              {!scraping && !scrapeError && scrapedProduct && (
+                <div className="space-y-8">
+                  {/* Main Product */}
+                  <div>
+                    <div className="bg-[#E8F4F1] border-3 border-black p-3 mb-6 inline-block">
+                      <h3 className="text-2xl font-bold text-[#6B9B8E] uppercase tracking-wide">✓ Product Found</h3>
+                    </div>
+                    <div className="border-4 border-black p-6 bg-white drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                      <div className="flex gap-6">
+                      {/* Product Image */}
+                      <div className="w-40 h-40 bg-[#E8DCC4] border-4 border-black flex items-center justify-center shrink-0 p-3">
+                        {scrapedProduct.imageUrl ? (
+                          <img
+                            src={scrapedProduct.imageUrl}
+                            alt={scrapedProduct.title}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement.innerHTML = `
+                                <svg class="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                              `;
+                            }}
+                          />
+                        ) : (
+                          <svg className="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Product Details */}
+                      <div className="flex-1">
+                        <h4 className="text-2xl font-bold text-gray-800 mb-3 leading-tight uppercase">{scrapedProduct.title}</h4>
+                        <div className="bg-[#E8F4F1] border-2 border-black px-3 py-1 inline-block mb-4">
+                          <p className="text-sm font-bold text-[#6B9B8E]">
+                            {scrapedProduct.brand && `${scrapedProduct.brand} • `}{scrapedProduct.platform || 'Unknown Platform'}
+                          </p>
+                        </div>
+                        <div className="bg-white border-4 border-black p-4 mb-4">
+                          <div className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Current Price</div>
+                          <div className="flex items-baseline gap-4">
+                            <span className="text-4xl font-bold text-[#6B9B8E]">
+                              ₹{scrapedProduct.currentPrice?.toLocaleString('en-IN')}
+                            </span>
+                            {scrapedProduct.originalPrice && scrapedProduct.originalPrice > scrapedProduct.currentPrice && (
+                              <>
+                                <span className="text-xl text-gray-400 line-through">
+                                  ₹{scrapedProduct.originalPrice?.toLocaleString('en-IN')}
+                                </span>
+                                <span className="text-sm font-bold text-white bg-[#F4A460] px-3 py-2 border-3 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,0.3)]">
+                                  {Math.round(((scrapedProduct.originalPrice - scrapedProduct.currentPrice) / scrapedProduct.originalPrice) * 100)}% OFF
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {scrapedProduct.rating && (
+                          <div className="bg-white border-2 border-black px-3 py-2 inline-block">
+                            <span className="font-bold text-gray-800">⭐ {scrapedProduct.rating}</span>
+                            {scrapedProduct.reviewCount && (
+                              <span className="text-sm text-gray-600 ml-3">
+                                {scrapedProduct.reviewCount?.toLocaleString('en-IN')} reviews
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-6 flex gap-4">
+                      <button
+                        onClick={handleTrackProduct}
+                        className="flex-1 py-4 px-6 bg-[#F4A460] text-white font-bold text-lg uppercase hover:bg-[#E89450] transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+                      >
+                        📌 Track This Product
+                      </button>
+                      <button
+                        onClick={() => window.open(scrapedProduct.url, '_blank')}
+                        className="py-4 px-8 bg-white text-gray-800 font-bold uppercase hover:bg-[#E8DCC4] transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+                      >
+                        🔗 View Original
+                      </button>
+                    </div>
+                  </div>
+                  </div>
+
+                  {/* Similar Products from Other Platforms */}
+                  {scrapedProducts && scrapedProducts.length > 0 && (
+                    <div>
+                      <div className="bg-[#E8F4F1] border-3 border-black p-3 mb-6 inline-block">
+                        <h3 className="text-2xl font-bold text-[#6B9B8E] uppercase tracking-wide">💰 Similar Products on Other Platforms</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {scrapedProducts.map((product, index) => (
+                          <div key={index} className="border-4 border-black p-5 bg-white drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all">
+                            {/* Platform Badge */}
+                            <div className="mb-4">
+                              <span className={`inline-block px-4 py-2 text-sm font-bold border-3 border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,0.3)] ${
+                                product.platform === 'Amazon' ? 'bg-orange-400 text-white' :
+                                product.platform === 'Flipkart' ? 'bg-blue-500 text-white' :
+                                product.platform === 'eBay' ? 'bg-yellow-400 text-black' :
+                                'bg-gray-400 text-white'
+                              }`}>
+                                {product.platform || 'Unknown'}
+                              </span>
+                            </div>
+
+                            {/* Product Image */}
+                            <div className="w-full h-40 bg-[#E8DCC4] border-3 border-black flex items-center justify-center mb-4 p-3">
+                              {product.imageUrl ? (
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.title}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              ) : (
+                                <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                              )}
+                            </div>
+
+                            {/* Product Details */}
+                            <h4 className="text-lg font-bold text-gray-800 mb-3 line-clamp-2 leading-tight uppercase">{product.title}</h4>
+                            
+                            <div className="mb-4 bg-[#E8F4F1] border-3 border-black p-3">
+                              <div className="text-xs font-bold text-gray-600 mb-1">CURRENT PRICE</div>
+                              <span className="text-3xl font-bold text-[#6B9B8E]">
+                                ₹{product.currentPrice?.toLocaleString('en-IN')}
+                              </span>
+                              {product.originalPrice && product.originalPrice > product.currentPrice && (
+                                <>
+                                  <div className="text-sm text-gray-500 line-through mt-2">
+                                    ₹{product.originalPrice?.toLocaleString('en-IN')}
+                                  </div>
+                                  <div className="inline-block text-xs font-bold text-white bg-[#F4A460] px-3 py-1 border-2 border-black mt-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.3)]">
+                                    {Math.round(((product.originalPrice - product.currentPrice) / product.originalPrice) * 100)}% OFF
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {product.rating && (
+                              <div className="text-sm text-gray-700 mb-4 font-bold bg-white border-2 border-black px-2 py-1 inline-block">
+                                ⭐ {product.rating}
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="space-y-2 mt-4">
+                              <button
+                                onClick={() => window.open(product.url, '_blank')}
+                                className="w-full py-3 px-4 bg-[#6B9B8E] text-white font-bold text-sm uppercase hover:bg-[#5A8A7D] transition-all border-3 border-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[5px_5px_0px_rgba(0,0,0,1)]"
+                              >
+                                View on {product.platform}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Platform Search Links */}
+                  {searchResults && searchResults.platformResults && searchResults.platformResults.length > 0 && (
+                    <div>
+                      <div className="bg-[#E8F4F1] border-3 border-black p-3 mb-6 inline-block">
+                        <h3 className="text-2xl font-bold text-[#6B9B8E] uppercase tracking-wide">🔍 Search on Other Platforms</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {searchResults.platformResults.map((result, index) => (
+                          <button
+                            key={index}
+                            onClick={() => window.open(result.searchUrl, '_blank')}
+                            className={`p-4 font-bold text-white uppercase border-4 border-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-all ${
+                              result.platform === 'Amazon' ? 'bg-orange-400 hover:bg-orange-500' :
+                              result.platform === 'Flipkart' ? 'bg-blue-500 hover:bg-blue-600' :
+                              result.platform === 'eBay' ? 'bg-yellow-400 hover:bg-yellow-500 text-black' :
+                              'bg-gray-400 hover:bg-gray-500'
+                            }`}
+                          >
+                            🔗 Search on {result.platform}
+                            {result.totalFound > 0 && (
+                              <span className="block text-xs mt-1 opacity-90">
+                                {result.totalFound} products found
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Empty/Initial State */}
+              {!scraping && !scrapeError && !scrapedProduct && (
+                <div className="text-center py-16">
+                  <div className="w-24 h-24 bg-[#E8DCC4] border-4 border-black mx-auto mb-6 flex items-center justify-center">
+                    <svg className="w-16 h-16 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                  </div>
+                  <div className="bg-[#E8F4F1] border-3 border-black p-4 inline-block">
+                    <p className="font-bold text-gray-800 text-lg uppercase">
+                      {multiPlatformMode ? 'Enter URLs to Compare' : 'Waiting to Scrape...'}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t-4 border-black p-4 bg-gray-50 flex-shrink-0">
+            <div className="border-t-[6px] border-black p-5 bg-[#E8DCC4] shrink-0">
               <button
                 onClick={handleCloseModal}
-                className="w-full py-2 px-4 bg-black text-white font-bold hover:bg-gray-800 transition-colors"
+                className="w-full py-4 px-4 bg-black text-white font-bold text-lg uppercase hover:bg-gray-800 transition-all border-3 border-white drop-shadow-[4px_4px_0px_rgba(0,0,0,0.5)]"
               >
-                Close
+                ✕ Close Window
               </button>
             </div>
           </div>

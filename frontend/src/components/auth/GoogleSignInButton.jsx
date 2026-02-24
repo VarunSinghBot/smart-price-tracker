@@ -6,7 +6,8 @@ export default function GoogleSignInButton() {
     const handleGoogleSignIn = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/google`, {
+            const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+            const response = await fetch(`${baseURL}/auth/google`, {
                 credentials: 'include'
             });
             

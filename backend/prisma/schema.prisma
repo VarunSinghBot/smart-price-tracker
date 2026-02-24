@@ -13,59 +13,83 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String?  // nullable for OAuth users
-  googleId   String?  @unique
-  username   String?  @unique  // optional username, unique if provided, needs to be checked for availability
-  name       String?  // real name
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id         String    @id @default(cuid())
+  email      String    @unique
+  password   String?   // nullable for OAuth users
+  googleId   String?   @unique
+  username   String?   @unique  // optional username, unique if provided, needs to be checked for availability
+  name       String?   // real name
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  
+  // Relations
+  products   Product[]
+  alerts     Alert[]
 }
 
-// model User {
-//   id        String   @id @default(uuid())
-//   email     String   @unique
-//   password  String
-//   createdAt DateTime @default(now())
+model Product {
+  id           String         @id @default(cuid())
+  url          String         // Original product URL
+  title        String
+  platform     String         // Platform name (Amazon, eBay, Flipkart, etc.)
+  imageUrl     String?        // Product image
+  currentPrice Float?         // Latest known price
+  currency     String         @default("USD")
+  inStock      Boolean        @default(true)
+  productId    String?        // Platform-specific product ID (ASIN, etc.)
+  metadata     Json?          // Additional flexible data (brand, specs, rating, etc.)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  lastChecked  DateTime       @default(now())
+  
+  // Foreign Keys
+  userId       String
+  
+  // Relations
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  priceHistory PriceHistory[]
+  alerts       Alert[]
+  
+  @@unique([url, userId]) // Prevent duplicate URL tracking per user
+  @@index([userId])
+  @@index([platform])
+  @@index([lastChecked])
+}
 
-//   products  Product[]
-//   alerts    Alert[]
-// }
+model PriceHistory {
+  id        String   @id @default(cuid())
+  price     Float
+  inStock   Boolean  @default(true)
+  scrapedAt DateTime @default(now())
+  
+  // Foreign Keys
+  productId String
+  
+  // Relations
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([productId])
+  @@index([scrapedAt])
+}
 
-// model Product {
-//   id        String   @id @default(uuid())
-//   url       String
-//   title     String
-//   platform  String
-//   createdAt DateTime @default(now())
-
-//   userId    String
-//   user      User     @relation(fields: [userId], references: [id])
-
-//   prices    PriceHistory[]
-
-//   alerts Alert[]
-// }
-
-// model PriceHistory {
-//   id        String   @id @default(uuid())
-//   price     Float
-//   scrapedAt DateTime @default(now())
-
-//   productId String
-//   product   Product  @relation(fields: [productId], references: [id])
-// }
-
-// model Alert {
-//   id        String   @id @default(uuid())
-//   target    Float
-//   active    Boolean  @default(true)
-//   createdAt DateTime @default(now())
-
-//   userId    String
-//   user      User     @relation(fields: [userId], references: [id])
-
-//   productId String
-//   product   Product  @relation(fields: [productId], references: [id])
-// }
+model Alert {
+  id           String    @id @default(cuid())
+  targetPrice  Float     // Price threshold to trigger alert
+  active       Boolean   @default(true)
+  notified     Boolean   @default(false)
+  notifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Foreign Keys
+  userId       String
+  productId    String
+  
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([productId])
+  @@index([active, notified]) // Compound index for alert processing
+}

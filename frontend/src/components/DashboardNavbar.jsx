@@ -20,10 +20,11 @@ function DashboardNavbar() {
   const handleLogout = async () => {
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/auth/logout`,
+        '/auth/logout',
         {},
         {
           withCredentials: true,
+          baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
         }
       );
     } catch (error) {

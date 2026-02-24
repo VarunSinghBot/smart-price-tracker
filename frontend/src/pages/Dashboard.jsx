@@ -1,63 +1,140 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from 'react-redux';
 import DashboardLayout from "../layouts/DashboardLayout";
-import { showSuccessToast, showWarningToast, showInfoToast } from "../components/ui/Toast";
+import { showSuccessToast, showWarningToast, showInfoToast, showErrorToast } from "../components/ui/Toast";
+import { fetchProducts, fetchProductStats, removeProduct } from '../store/productSlice';
+import { fetchAlerts } from '../store/alertSlice';
+import { fetchSupportedPlatforms, addToSearchHistory } from '../store/scraperSlice';
+import AddProductModal from '../components/products/AddProductModal';
+import SetAlertModal from '../components/products/SetAlertModal';
+import RemoveProductModal from '../components/products/RemoveProductModal';
+import ProductCard from '../components/products/ProductCard';
+import PriceHistoryChart from '../components/products/PriceHistoryChart';
 
 function Dashboard() {
+  const dispatch = useDispatch();
+  
+  // Redux state
+  const { products, loading, error, stats } = useSelector((state) => state.products);
+  const { alerts } = useSelector((state) => state.alerts);
+  const { scrapedProducts } = useSelector((state) => state.scraper);
+  
+  // Get alert for a product
+  const getProductAlert = (productId) => {
+    return alerts.find(alert => alert.productId === productId && alert.active);
+  };
+  
+  // User state from localStorage
+  const user = JSON.parse(localStorage.getItem("user") || '{"name":"Smart Shopper"}');
+  
   // Selected product state
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProductForAlert, setSelectedProductForAlert] = useState(null);
+  const [selectedProductForDetails, setSelectedProductForDetails] = useState(null);
+  const [selectedProductForRemoval, setSelectedProductForRemoval] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [prefilledProductUrl, setPrefilledProductUrl] = useState(null);
   
-  // Tracked products state
-  const [trackedProducts, setTrackedProducts] = useState([]);
+  // Modal states
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showSetAlertModal, setShowSetAlertModal] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  
+  // Filter and pagination states
   const [selectedCategory, setSelectedCategory] = useState('Everything');
-  
-  // Pagination states
-  const [displayedPopularCount, setDisplayedPopularCount] = useState(6);
+  const [selectedPlatform, setSelectedPlatform] = useState('all');
   const [displayedRecommendedCount, setDisplayedRecommendedCount] = useState(8);
 
-  // Load tracked products from localStorage on mount
+  // Combine tracked products with scraped products (search history)
+  // Mark tracked products and limit to max 10
+  const searchedProducts = useMemo(() => {
+    const trackedProductUrls = new Set(products.map(p => p.url));
+    
+    // Map tracked products with isTracked flag and alert info
+    const trackedWithFlag = products.map(p => ({ 
+      ...p, 
+      isTracked: true,
+      alert: getProductAlert(p.id)
+    }));
+    
+    // Map scraped products with isTracked flag
+    const scrapedWithFlag = (scrapedProducts || [])
+      .filter(p => !trackedProductUrls.has(p.url)) // Exclude already tracked
+      .map(p => ({ ...p, isTracked: false, alert: null }));
+    
+    // Combine and limit to 10
+    return [...trackedWithFlag, ...scrapedWithFlag].slice(0, 10);
+  }, [products, scrapedProducts, alerts]);
+
+  // Load data on mount
   useEffect(() => {
-    const savedTrackedProducts = localStorage.getItem('trackedProducts');
-    if (savedTrackedProducts) {
-      try {
-        setTrackedProducts(JSON.parse(savedTrackedProducts));
-      } catch (error) {
-        console.error('Error loading tracked products:', error);
-      }
-    }
-  }, []);
+    dispatch(fetchProducts());
+    dispatch(fetchProductStats());
+    dispatch(fetchAlerts());
+    dispatch(fetchSupportedPlatforms());
+  }, [dispatch]);
 
-  // Function to add product to tracker
+  // Set first product as selected by default
+  useEffect(() => {
+    if (searchedProducts.length > 0 && !selectedProductForDetails) {
+      setSelectedProductForDetails(searchedProducts[0]);
+    }
+  }, [searchedProducts, selectedProductForDetails]);
+
+  // Handlers
   const handleSetPriceAlert = (product) => {
-    // Check if product is already tracked
-    const isAlreadyTracked = trackedProducts.some(p => p.id === product.id);
-    
-    if (isAlreadyTracked) {
-      showWarningToast('This product is already being tracked!');
-      return;
-    }
-
-    // Add tracking timestamp and alert settings
-    const trackedProduct = {
-      ...product,
-      trackedAt: new Date().toISOString(),
-      alertPrice: product.price * 0.9, // Default: alert when price drops 10%
-      isActive: true
-    };
-
-    const updatedTrackedProducts = [...trackedProducts, trackedProduct];
-    setTrackedProducts(updatedTrackedProducts);
-    
-    // Save to localStorage
-    localStorage.setItem('trackedProducts', JSON.stringify(updatedTrackedProducts));
-    
-    // Show success toast
-    showSuccessToast(`${product.name} added to tracker! You'll be notified when price drops.`);
-    
-    console.log('Product added to tracker:', trackedProduct);
+    setSelectedProductForAlert(product);
+    setShowSetAlertModal(true);
   };
 
-  // Mock data for dashboard with product images
+  const handleViewDetails = (product) => {
+    // Trigger animation
+    setIsAnimating(true);
+    setTimeout(() => {
+      setSelectedProductForDetails(product);
+      setIsAnimating(false);
+    }, 150);
+  };
+
+  const handleProductAdded = () => {
+    // Reload dashboard data
+    dispatch(fetchProducts());
+    dispatch(fetchProductStats());
+  };
+
+  const handleRemoveProduct = async (productId) => {
+    const product = products.find(p => p.id === productId);
+    setSelectedProductForRemoval(product);
+    setShowRemoveModal(true);
+  };
+
+  const confirmRemoveProduct = async () => {
+    if (!selectedProductForRemoval) return;
+    
+    try {
+      // Add to search history before removing from tracker
+      dispatch(addToSearchHistory(selectedProductForRemoval));
+      
+      await dispatch(removeProduct(selectedProductForRemoval.id)).unwrap();
+      showSuccessToast('Product removed successfully!');
+      dispatch(fetchProducts()); // Refresh list
+    } catch (error) {
+      showErrorToast(error || 'Failed to remove product');
+    } finally {
+      setShowRemoveModal(false);
+      setSelectedProductForRemoval(null);
+    }
+  };
+
+  // Get categories from products
+  const categories = ['Everything', ...new Set(products.map(p => p.platform))];
+
+  // Filter products by category/platform
+  const filteredProducts = selectedCategory === 'Everything'
+    ? searchedProducts
+    : searchedProducts.filter(p => p.platform === selectedCategory);
+
+  // Mock data for tracking activity (will be replaced with real API later)
   const [dashboardData] = useState({
     productsTracked: 12,
     activeAlerts: 5,
@@ -305,9 +382,6 @@ function Dashboard() {
     ],
   });
 
-  // Get user from localStorage for display (DashboardLayout handles auth)
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-
   // Set first product as selected by default
   useState(() => {
     if (dashboardData.popularProducts.length > 0 && !selectedProduct) {
@@ -346,10 +420,6 @@ function Dashboard() {
   };
 
   // Handle load more
-  const handleLoadMorePopular = () => {
-    setDisplayedPopularCount(prev => prev + 6);
-  };
-
   const handleLoadMoreRecommended = () => {
     setDisplayedRecommendedCount(prev => prev + 8);
   };
@@ -357,158 +427,216 @@ function Dashboard() {
   return (
     <DashboardLayout>
       {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">
-          Welcome back, {user?.name || user?.username || "User"}!
-        </h1>
-        <p className="text-xl text-[#6B9B8E] font-semibold">
-          You've saved ₹{dashboardData.totalSavings.toLocaleString()} so far!
-        </p>
+      <div className="mb-6">
+        <div className="bg-[#E8DCC4] border-3 border-black p-6 drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+            Welcome back, {user?.name?.toUpperCase() || user?.username?.toUpperCase() || "VARUN SINGH"} {user?.id || "2547254"}!
+          </h1>
+          <p className="text-lg text-[#6B9B8E] font-semibold">
+            You've saved ₹{stats?.totalSavings?.toLocaleString() || dashboardData.totalSavings.toLocaleString()} so far!
+          </p>
+        </div>
       </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">Products Tracked</h3>
-              <div className="w-12 h-12 bg-[#E8F4F1] flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white border-3 border-black p-5 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-gray-600 font-semibold text-sm">Products Tracked</h3>
+              <div className="w-12 h-12 bg-[#E8F4F1] border-2 border-black rounded flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold text-gray-800">{trackedProducts.length}</p>
+            <p className="text-4xl font-bold text-gray-900">{products.length}</p>
           </div>
 
-          <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">Active Alerts</h3>
-              <div className="w-12 h-12 bg-[#E8F4F1] flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          <div className="bg-white border-3 border-black p-5 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-gray-600 font-semibold text-sm">Active Alerts</h3>
+              <div className="w-12 h-12 bg-[#E8F4F1] border-2 border-black rounded flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold text-gray-800">{dashboardData.activeAlerts}</p>
+            <p className="text-4xl font-bold text-gray-900">{alerts.filter(a => a.active).length}</p>
           </div>
 
-          <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">Deals Confirmed</h3>
-              <div className="w-12 h-12 bg-[#E8F4F1] flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="bg-white border-3 border-black p-5 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-gray-600 font-semibold text-sm">Deals Confirmed</h3>
+              <div className="w-12 h-12 bg-[#E8F4F1] border-2 border-black rounded flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold text-gray-800">{dashboardData.dealsConfirmed}</p>
+            <p className="text-4xl font-bold text-gray-900">{alerts.filter(a => a.triggered).length}</p>
           </div>
 
-          <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-600 font-medium">Total Savings</h3>
-              <div className="w-12 h-12 bg-[#E8F4F1] flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="bg-white border-3 border-black p-5 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-gray-600 font-semibold text-sm">Total Savings</h3>
+              <div className="w-12 h-12 bg-[#E8F4F1] border-2 border-black rounded flex items-center justify-center">
+                <svg className="w-6 h-6 text-[#6B9B8E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold text-gray-800">₹{dashboardData.totalSavings.toLocaleString()}</p>
+            <p className="text-4xl font-bold text-gray-900">₹{stats?.totalSavings?.toLocaleString() || (dashboardData.totalSavings || 6200).toLocaleString()}</p>
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Popular Products */}
-          <div className="lg:col-span-2 bg-white border-4 border-black p-6">
+        {/* Popular/Recently Tracked Products Section */}
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Products Grid */}
+          <div className="lg:col-span-2 bg-white border-3 border-black p-6 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-800">Popular Products</h3>
-              <span className="text-sm text-gray-600">
-                Showing {Math.min(displayedPopularCount, dashboardData.popularProducts.length)} of {dashboardData.popularProducts.length}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {dashboardData.popularProducts.slice(0, displayedPopularCount).map((product) => (
-                <div 
-                  key={product.id} 
-                  onClick={() => handleProductClick(product)}
-                  className={`border-3 overflow-hidden hover:border-[rgb(244,164,96)] transition-all cursor-pointer group drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(244,164,96,1)]`}
-                >
-                  <div className="aspect-3/4 bg-gray-100 flex items-center justify-center relative">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <ProductPlaceholder />
-                    )}
-                    {product.status === "dropped" && (
-                      <div className="absolute top-2 right-2 w-8 h-8 bg-green-500 flex items-center justify-center border-2 border-black">
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3 bg-white">
-                    <h4 className="font-bold text-sm text-gray-800 mb-1 truncate">{product.name}</h4>
-                    <p className="text-xs text-gray-500 mb-2">{product.platform}</p>
-                    <div className="flex items-center gap-1 mb-1">
-                      {[...Array(5)].map((_, i) => (
-                        <svg 
-                          key={i} 
-                          className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'text-[#F4A460]' : 'text-gray-300'} fill-current`} 
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                        </svg>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-gray-800 font-bold">₹{product.price.toLocaleString()}</p>
-                      {product.status === "dropped" && (
-                        <span className="text-xs text-green-600 font-bold">{product.change}%</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {displayedPopularCount < dashboardData.popularProducts.length && (
-              <div className="mt-6 flex justify-center">
-                <button 
-                  onClick={handleLoadMorePopular}
-                  className="px-6 py-3 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-colors drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:cursor-pointer"
-                >
-                  Load More Products
-                </button>
+              <h3 className="text-2xl font-bold text-gray-900">Searched Products</h3>
+              <div className="text-gray-500 font-medium text-sm">
+                Showing {Math.min(filteredProducts.length, 10)} of {filteredProducts.length} (Max 10)
               </div>
+            </div>
+
+            {loading && (
+              <div className="flex flex-col justify-center items-center py-8 gap-3">
+                <div className="w-12 h-12 border-4 border-black border-t-[#6B9B8E] rounded-full animate-spin"></div>
+                <div className="bg-[#E8DCC4] border-2 border-black px-4 py-2">
+                  <p className="text-gray-800 text-sm font-bold uppercase tracking-wide">Loading Products...</p>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-red-100 border-3 border-red-600 p-4 drop-shadow-[4px_4px_0px_rgba(220,38,38,0.5)]">
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl">⚠️</div>
+                  <p className="text-red-800 font-bold text-sm uppercase tracking-wide">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {!loading && !error && filteredProducts.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="bg-[#E8DCC4] border-3 border-black p-6 drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] max-w-md">
+                  <div className="text-5xl mb-3">📦</div>
+                  <p className="text-gray-800 font-bold text-lg mb-2 uppercase tracking-wide">No Products Yet</p>
+                  <p className="text-gray-600 font-semibold text-xs mb-4 uppercase tracking-wide">Start tracking to find the best deals</p>
+                  <button
+                    onClick={() => setShowAddProductModal(true)}
+                    className="px-5 py-2 bg-[#F4A460] text-white text-sm font-bold border-3 border-black hover:bg-[#E89450] transition-all drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[5px_5px_0px_rgba(0,0,0,1)] uppercase tracking-wide"
+                  >
+                    🔍 Add First Product
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!loading && !error && filteredProducts.length > 0 && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {filteredProducts.map((product) => (
+                    <div 
+                      key={product.id || product.url}
+                      onClick={() => handleViewDetails(product)}
+                      className="border-3 border-black overflow-hidden hover:border-[#F4A460] transition-all cursor-pointer group drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(244,164,96,1)]"
+                    >
+                      <div className="aspect-3/4 bg-gray-100 flex items-center justify-center relative">
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.title} className="w-full h-full object-contain" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg className="w-16 h-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                          </div>
+                        )}
+                        {(product.isTracked || (product.alert && product.alert.active)) && (
+                          <div className="absolute top-2 right-2 w-8 h-8 bg-green-500 flex items-center justify-center border-2 border-black">
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 bg-white">
+                        <h4 className="font-bold text-sm text-gray-800 mb-1 truncate">{product.title}</h4>
+                        <p className="text-xs text-gray-500 mb-2">{product.platform}</p>
+                        {product.metadata?.rating ? (
+                          <div className="flex items-center gap-1 mb-2">
+                            {[...Array(5)].map((_, i) => (
+                              <svg 
+                                key={i} 
+                                className={`w-3 h-3 ${i < Math.floor(product.metadata.rating) ? 'text-[#F4A460]' : 'text-gray-300'} fill-current`} 
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                              </svg>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="h-3 mb-2"></div>
+                        )}
+                        <p className="text-xs text-gray-800 font-bold">₹{product.currentPrice?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
           {/* Product Details Sidebar */}
           <div className="bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-            {selectedProduct ? (
-              <div className={`transition-all duration-500 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+            {selectedProductForDetails ? (
+              <div className={`transition-all duration-300 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
                 <div className="mb-6">
                   <div className="aspect-square bg-[#F4DFC8] mb-4 flex items-center justify-center border-2 border-black overflow-hidden">
-                    {selectedProduct.image ? (
-                      <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-full object-contain p-2" />
+                    {selectedProductForDetails.imageUrl ? (
+                      <img src={selectedProductForDetails.imageUrl} alt={selectedProductForDetails.title} className="w-full h-full object-contain p-2" />
                     ) : (
-                      <ProductPlaceholder className="w-24 h-24 text-[#F4A460]" />
+                      <svg className="w-24 h-24 text-[#F4A460]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-1">{selectedProduct.name}</h3>
+                  <h3 className="text-xl font-bold text-gray-800 mb-1">{selectedProductForDetails.title}</h3>
                   <p className="text-sm text-gray-600 mb-3">
-                    By: {selectedProduct.brand}<br />
-                    Platform: {selectedProduct.platform}
+                    By: {selectedProductForDetails.metadata?.brand || 'Apple Inc.'}<br />
+                    Platform: {selectedProductForDetails.platform}<br />
+                    <span className={`inline-block mt-1 px-2 py-1 text-xs font-bold border-2 border-black ${selectedProductForDetails.isTracked ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+                      {selectedProductForDetails.isTracked ? '✓ Tracked' : 'Not Tracked'}
+                    </span>
                   </p>
                   
+                  {selectedProductForDetails.isTracked ? (
+                    <button 
+                      onClick={() => {
+                        setSelectedProductForAlert(selectedProductForDetails);
+                        setShowSetAlertModal(true);
+                      }}
+                      className="w-full py-3 bg-white border-2 border-[#6B9B8E] text-gray-800 font-medium mb-3 hover:bg-gray-50 transition-colors hover:cursor-pointer"
+                    >
+                      📌 Set Price Alert
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        // Pre-fill the add product modal with the product URL
+                        setPrefilledProductUrl(selectedProductForDetails.url);
+                        setShowAddProductModal(true);
+                      }}
+                      className="w-full py-3 bg-[#6B9B8E] border-2 border-black text-white font-bold mb-3 hover:bg-[#5A8A7D] transition-colors hover:cursor-pointer"
+                    >
+                      ➕ Add to Tracker
+                    </button>
+                  )}
                   <button 
-                    onClick={() => handleSetPriceAlert(selectedProduct)}
-                    className="w-full py-3 bg-white border-2 border-[#6B9B8E] text-gray-800 font-medium mb-3 hover:bg-gray-50 transition-colors hover:cursor-pointer"
+                    onClick={() => window.open(selectedProductForDetails.url, '_blank')}
+                    className="w-full py-3 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors flex items-center justify-center gap-2 hover:cursor-pointer border-2 border-black"
                   >
-                    📌 Set Price Alert
-                  </button>
-                  <button className="w-full py-3 bg-[#F4A460] text-white font-bold hover:bg-[#E89450] transition-colors flex items-center justify-center gap-2 hover:cursor-pointer border-2 border-black">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z" />
                     </svg>
@@ -517,183 +645,129 @@ function Dashboard() {
                 </div>
 
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Rating</span>
-                    <span className="font-bold text-gray-800">⭐ {selectedProduct.rating} ({selectedProduct.reviews.toLocaleString()})</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Category</span>
-                    <span className="font-bold text-gray-800">{selectedProduct.category}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Format</span>
-                    <span className="font-bold text-gray-800">{selectedProduct.format}</span>
-                  </div>
-                  {selectedProduct.originalPrice !== selectedProduct.price && (
+                  {selectedProductForDetails.metadata?.rating && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Original Price</span>
-                      <span className="font-bold text-gray-400 line-through">₹{selectedProduct.originalPrice.toLocaleString()}</span>
+                      <span className="text-gray-600">Rating</span>
+                      <span className="font-bold text-gray-800">⭐ {selectedProductForDetails.metadata.rating} ({selectedProductForDetails.metadata.reviewCount?.toLocaleString() || 1523})</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Current Price</span>
-                    <span className="font-bold text-gray-800">₹{selectedProduct.price.toLocaleString()}</span>
+                    <span className="text-gray-600">Category</span>
+                    <span className="font-bold text-gray-800">{selectedProductForDetails.metadata?.category || 'Electronics'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Status</span>
-                    <span className={`font-bold ${selectedProduct.status === 'dropped' ? 'text-green-600' : 'text-gray-600'}`}>
-                      {selectedProduct.status === 'dropped' ? '🔥 Price Dropped!' : selectedProduct.status === 'alert' ? '🔔 Alert Set' : 'No Change'}
-                    </span>
+                    <span className="text-gray-600">Format</span>
+                    <span className="font-bold text-gray-800">{selectedProductForDetails.metadata?.format || 'Physical'}</span>
                   </div>
-                </div>
-
-                <div className="mt-6 pt-6 border-t-2 border-gray-200">
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {selectedProduct.description}
-                  </p>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Current Price</span>
+                    <span className="font-bold text-gray-800">₹{selectedProductForDetails.currentPrice?.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-400">
+              <div className="flex items-center justify-center h-full text-gray-400 min-h-[400px]">
                 <p>Select a product to view details</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Categories - Shows first on mobile, second on desktop */}
-          <div className="order-1 lg:order-2 bg-white border-4 border-black p-6 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Categories</h3>
-            <div className="flex flex-wrap gap-2">
-              <button 
-                onClick={() => handleCategorySelect('Everything')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Everything'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Everything
-              </button>
-              <button 
-                onClick={() => handleCategorySelect('Electronics')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Electronics'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Electronics
-              </button>
-              <button 
-                onClick={() => handleCategorySelect('Fashion')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Fashion'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Fashion
-              </button>
-              <button 
-                onClick={() => handleCategorySelect('Magazines')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Magazines'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Magazines
-              </button>
-              <button 
-                onClick={() => handleCategorySelect('Home & Kitchen')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Home & Kitchen'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Home & Kitchen
-              </button>
-              <button 
-                onClick={() => handleCategorySelect('Sports')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Sports'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Sports
-              </button>
-              <button 
-                onClick={() => handleCategorySelect('Comics')}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-2 ${
-                  selectedCategory === 'Comics'
-                    ? 'bg-[#F4A460] text-white border-black drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]'
-                    : 'bg-white border-gray-300 text-gray-700 hover:border-[#F4A460]'
-                } hover:cursor-pointer`}
-              >
-                Comics
-              </button>
-            </div>
-          </div>
-
-          {/* Recommended Products - Shows second on mobile, first on desktop */}
-          <div className="order-2 lg:order-1 lg:col-span-2 bg-white border-4 border-black p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-800">Recommended Products</h3>
-              <span className="text-sm text-gray-600">
-                Showing {Math.min(displayedRecommendedCount, getFilteredProducts().length)} of {getFilteredProducts().length}
-              </span>
-            </div>
-            {getFilteredProducts().length > 0 ? (
-              <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {getFilteredProducts().slice(0, displayedRecommendedCount).map((product) => (
-                  <div 
-                    key={product.id} 
-                    // onClick={() => handleProductClick(product)}
-                    className="border-3 border-black overflow-hidden hover:border-[#F4A460] transition-colors cursor-pointer drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(244,164,96,1)]"
+        {/* Your Tracked Products - Full Management Section */}
+        <div className="mb-6">
+          <div className="bg-white border-3 border-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <div className="bg-[#6B9B8E] border-b-3 border-black p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-bold text-white uppercase tracking-wide mb-1">Manage Products</h3>
+                  <p className="text-sm text-white/90 font-medium">
+                    Track and monitor your saved products
+                  </p>
+                </div>
+                <div className="flex gap-2 md:gap-3">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-2.5 text-sm border-3 border-black font-bold bg-white hover:bg-[#E8DCC4] transition-all drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]"
                   >
-                    <div className="aspect-3/4 bg-gray-100 flex items-center justify-center">
-                      {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
-                      ) : (
-                        <ProductPlaceholder className="w-12 h-12" />
-                      )}
-                    </div>
-                    <div className="p-2 bg-white">
-                      <h4 className="font-bold text-xs text-gray-800 truncate">{product.name}</h4>
-                      <p className="text-xs text-gray-500">{product.brand}</p>
-                      <p className="text-xs text-gray-800 font-bold mt-1">₹{product.price.toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {displayedRecommendedCount < getFilteredProducts().length && (
-                <div className="mt-6 flex justify-center">
-                  <button 
-                    onClick={handleLoadMoreRecommended}
-                    className="px-6 py-3 bg-[#F4A460] text-white font-bold border-2 border-black hover:bg-[#E89450] transition-colors drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:cursor-pointer"
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowAddProductModal(true)}
+                    className="px-5 py-2.5 text-sm bg-[#F4A460] text-white font-bold border-3 border-black hover:bg-[#E89450] transition-all drop-shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:drop-shadow-[5px_5px_0px_rgba(0,0,0,1)] uppercase tracking-wide whitespace-nowrap"
                   >
-                    Load More Recommendations
+                    + Add Product
                   </button>
                 </div>
-              )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <svg className="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                </svg>
-                <p className="text-gray-600 font-bold text-lg mb-1">No products found</p>
-                <p className="text-gray-500 text-sm">No recommended products available for "{selectedCategory}" category.</p>
               </div>
-            )}
+            </div>
+
+            <div className="p-4 md:p-6">
+              {filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onSetAlert={handleSetPriceAlert}
+                      onViewDetails={handleViewDetails}
+                      onRemove={handleRemoveProduct}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="bg-[#E8DCC4] border-3 border-black p-8 inline-block drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                    <svg className="w-16 h-16 text-gray-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    <p className="text-gray-900 font-bold text-lg uppercase tracking-wide mb-2">No Products in This Category</p>
+                    <p className="text-gray-600 font-medium text-sm">Try selecting a different category or add a new product</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Modals */}
+        {showAddProductModal && (
+          <AddProductModal 
+            onClose={() => {
+              setShowAddProductModal(false);
+              setPrefilledProductUrl(null);
+            }}
+            prefilledUrl={prefilledProductUrl}
+            onProductAdded={handleProductAdded}
+          />
+        )}
+
+        {showSetAlertModal && selectedProductForAlert && (
+          <SetAlertModal
+            isOpen={showSetAlertModal}
+            product={selectedProductForAlert}
+            onClose={() => {
+              setShowSetAlertModal(false);
+              setSelectedProductForAlert(null);
+              // Refresh alerts to show the newly created alert
+              dispatch(fetchAlerts());
+            }}
+          />
+        )}
+
+        {showRemoveModal && selectedProductForRemoval && (
+          <RemoveProductModal
+            isOpen={showRemoveModal}
+            productName={selectedProductForRemoval.title}
+            onClose={() => {
+              setShowRemoveModal(false);
+              setSelectedProductForRemoval(null);
+            }}
+            onConfirm={confirmRemoveProduct}
+          />
+        )}
     </DashboardLayout>
   );
 }

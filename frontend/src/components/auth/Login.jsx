@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../utils/api";
 import GoogleSignInButton from "./GoogleSignInButton";
 import { showSuccessToast, showErrorToast } from "../ui/Toast";
 
@@ -30,8 +30,8 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/auth/login`,
+      const response = await api.post(
+        '/auth/login',
         formData,
         {
           withCredentials: true,

@@ -30,21 +30,32 @@ app.use(cookieParser());
 
 // Routes Import
 import authRouter from "./routes/auth.route.js";
+import productRouter from "./routes/product.route.js";
+import scraperRouter from "./routes/scraper.route.js";
+import alertRouter from "./routes/alert.route.js";
+
+// Middleware Import
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 // Routes Declaration
 app.use("/api/v1/auth", authRouter);
-// app.use("/api/v1/auth/google", authRouter); // Google OAuth route
-// app.use("/api/v1/dashboard",dashboardRoutes)
+app.use("/api/v1/products", productRouter);
+app.use("/api/v1/scraper", scraperRouter);
+app.use("/api/v1/alerts", alertRouter);
+
 // Root endpoint to list all available endpoints
 app.get("/", (req, res) => {
     res.json({
-        message: "Welcome to the API!",
+        message: "Welcome to Smart Price Tracker API!",
+        version: "1.0.0",
         endpoints: {
             auth: "/api/v1/auth",
-        //     content: "/api/v1/content",
-        //     tags: "/api/v1/tags",
-        //     links: "/api/v1/links",
+            products: "/api/v1/products",
+            scraper: "/api/v1/scraper",
+            alerts: "/api/v1/alerts",
+            health: "/health"
         },
+        documentation: "For detailed API documentation, visit /api/docs (coming soon)"
     });
 });
 
@@ -52,8 +63,12 @@ app.get("/health", (req, res) => {
     res.json({
         status: "OK",
         timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
     });
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 export default app;

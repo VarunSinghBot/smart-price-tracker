@@ -7,7 +7,7 @@ const ConfirmDialog = ({ isOpen, onClose, title, message, confirmText = "Confirm
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="bg-white border-4 border-black max-w-md w-full drop-shadow-[12px_12px_0px_rgba(0,0,0,1)] animate-dialog-enter">
         {/* Header */}
         <div className="bg-[#F4A460] border-b-4 border-black p-4">
