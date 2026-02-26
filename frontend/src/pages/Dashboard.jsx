@@ -666,7 +666,7 @@ function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-400 min-h-[400px]">
+              <div className="flex items-center justify-center h-full text-gray-400 min-h-100">
                 <p>Select a product to view details</p>
               </div>
             )}
