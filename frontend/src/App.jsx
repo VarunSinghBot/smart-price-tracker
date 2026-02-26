@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard'
 import Trackers from './pages/Trackers'
 import Chat from './pages/Chat'
 import Library from './pages/Library'
+import Notifications from './pages/Notifications'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Contact from './pages/Contact'
@@ -48,6 +49,9 @@ function App() {
         
         {/* Library - Protected */}
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
+        
+        {/* Notifications - Protected */}
+        <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
         
         {/* Legal Pages */}
         <Route path="/terms" element={<Terms />} />

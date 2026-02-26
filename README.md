@@ -5,13 +5,21 @@ A comprehensive web application for tracking product prices across multiple e-co
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Supported Platforms](#supported-platforms)
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Getting Started](#getting-started)
 - [Documentation](#documentation)
 - [Project Structure](#project-structure)
+- [Authentication](#authentication)
+- [Web Scraping & Automation](#web-scraping--automation)
+- [Security Features](#security-features)
+- [Testing](#testing)
+- [API Endpoints](#api-endpoints)
+- [Deployment](#deployment)
 - [Contributing](#contributing)
 - [License](#license)
+- [Roadmap](#roadmap)
 
 ## 🎯 Overview
 
@@ -22,27 +30,43 @@ Smart Price Tracker is a full-stack web application that enables users to:
 - Compare prices across different retailers
 - Make data-driven purchasing decisions
 
+## 🛒 Supported Platforms
+
+Currently supporting automated price tracking from:
+- **Amazon** - World's largest online retailer
+- **Flipkart** - India's leading e-commerce platform
+- **eBay** - Global marketplace for new and used items
+
+*More platforms coming soon!*
+
 ## ✨ Features
 
-### Current Features (Phase 1 - MVP)
+### Current Features (Phase 1 & 2 - Implemented)
 - ✅ User authentication (Email/Password + Google OAuth)
 - ✅ Secure JWT token-based sessions
 - ✅ Responsive landing page
 - ✅ Protected routes and user dashboard
 - ✅ Toast notification system
 - ✅ Modern, accessible UI with Tailwind CSS
+- ✅ **Web scraping with Playwright** - Automated price extraction
+- ✅ **Multi-platform support** - Amazon, Flipkart, and eBay
+- ✅ **Product price tracking** - Real-time price monitoring
+- ✅ **Price history** - Historical price data and trend analysis
+- ✅ **Price alerts** - Automated notifications when prices drop below target
+- ✅ **Automated updates** - Scheduled price updates using cron jobs
+- ✅ **Bulk operations** - Update multiple products efficiently
 
-### Planned Features (Phase 2)
-- 🔄 Product URL tracking
-- 🔄 Automated price scraping
-- 🔄 Price history visualization
-- 🔄 Email/Push notifications for price drops
-- 🔄 Price comparison dashboard
+### Planned Features (Phase 3)
+- 🔄 Price history visualization with charts
+- 🔄 Advanced price comparison dashboard
+- 🔄 Email notifications for price drops
+- 🔄 Push notifications
+- 🔄 More platform support (Walmart, Best Buy, etc.)
 
-### Future Enhancements (Phase 3+)
+### Future Enhancements (Phase 4+)
 - 📱 Mobile application
 - 🧩 Browser extension
-- 📊 Advanced analytics
+- 📊 Advanced analytics and insights
 - 🤝 Wishlist sharing
 - 💼 Premium subscription features
 
@@ -65,6 +89,8 @@ Smart Price Tracker is a full-stack web application that enables users to:
 - **bcrypt** - Password hashing
 - **Google OAuth** - Third-party authentication
 - **Zod** - Schema validation
+- **Playwright** - Web scraping and browser automation
+- **node-cron** - Scheduled tasks for automated price updates
 
 ## 🚀 Getting Started
 
@@ -72,6 +98,7 @@ Smart Price Tracker is a full-stack web application that enables users to:
 - Node.js (v18+ recommended)
 - PostgreSQL database (or use Neon/Supabase)
 - Google OAuth credentials (optional, for OAuth login)
+- Playwright browsers (installed automatically with backend setup)
 
 ### Installation
 
@@ -88,6 +115,9 @@ cd backend
 # Install dependencies
 npm install
 
+# Install Playwright browsers for web scraping
+npx playwright install
+
 # Create .env file from example
 cp .env.example .env
 
@@ -96,6 +126,7 @@ cp .env.example .env
 # - JWT secrets
 # - Google OAuth credentials (optional)
 # - CORS origin
+# - ENABLE_SCHEDULER (for automated updates)
 
 # Run Prisma migrations
 npx prisma migrate dev
@@ -150,6 +181,9 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:4000/api/v1/auth/google/callback
 
 FRONTEND_URL=http://localhost:5173
+
+# Enable automated price updates
+ENABLE_SCHEDULER=true
 ```
 
 #### Frontend `.env`
@@ -182,11 +216,38 @@ smart-price-tracker/
 │   │   └── migrations/            # Database migrations
 │   ├── src/
 │   │   ├── controllers/           # Request handlers
-│   │   ├── middlewares/           # Express middlewares
+│   │   │   ├── auth.controller.js
+│   │   │   ├── product.controller.js
+│   │   │   ├── scraper.controller.js
+│   │   │   └── alert.controller.js
+│   │   ├── services/              # Business logic
+│   │   │   ├── scraper.service.js
+│   │   │   ├── product.service.js
+│   │   │   └── alert.service.js
 │   │   ├── routes/                # API routes
+│   │   │   ├── auth.route.js
+│   │   │   ├── product.route.js
+│   │   │   ├── scraper.route.js
+│   │   │   └── alert.route.js
+│   │   ├── middlewares/           # Express middlewares
+│   │   │   ├── auth.middleware.js
+│   │   │   ├── error.middleware.js
+│   │   │   └── validation.middleware.js
 │   │   ├── utils/                 # Utility functions
+│   │   │   ├── scrapers/          # Web scraping utilities
+│   │   │   │   ├── BaseScraper.js
+│   │   │   │   ├── AmazonScraper.js
+│   │   │   │   ├── FlipkartScraper.js
+│   │   │   │   ├── EbayScraper.js
+│   │   │   │   └── ScraperFactory.js
+│   │   │   ├── logger.js
+│   │   │   ├── scheduler.js       # Automated price updates
+│   │   │   ├── ApiError.js
+│   │   │   ├── ApiResponse.js
+│   │   │   └── prisma.js
 │   │   ├── app.js                 # Express app config
-│   │   └── index.js               # Server entry point
+│   │   ├── index.js               # Server entry point
+│   │   └── constants.js
 │   ├── .env.example               # Environment template
 │   └── package.json
 │
@@ -225,6 +286,34 @@ The application supports two authentication methods:
 - Automatic account creation/linking
 - Secure token verification
 
+## 🤖 Web Scraping & Automation
+
+### Scraping Architecture
+
+The application uses **Playwright** for robust, automated web scraping:
+
+- **Platform-Specific Scrapers**: Dedicated scrapers for Amazon, Flipkart, and eBay
+- **Base Scraper Class**: Provides common functionality like browser automation, anti-detection, and retry logic
+- **Scraper Factory**: Automatically detects platform from URL and routes to appropriate scraper
+- **Anti-Detection**: Random user agents, realistic delays, and browser fingerprinting prevention
+
+### Automated Price Updates
+
+Three tiers of automated updates run via cron jobs:
+
+1. **Frequent Updates** (Every 30 minutes): Updates 30 most recent products
+2. **Regular Updates** (Every 2 hours): Updates 100 products
+3. **Daily Updates** (Daily at 2 AM): Updates 500 products
+
+Products are prioritized by last check time to ensure fresh data.
+
+### Manual Updates
+
+Users can also trigger:
+- Single product updates on-demand
+- Bulk updates for multiple products
+- Immediate price checks before purchasing
+
 ## 🔒 Security Features
 
 - **Password Security**: bcrypt hashing with salt rounds
@@ -253,7 +342,27 @@ Testing infrastructure is planned for future phases:
 - `GET /api/v1/auth/google/callback` - OAuth callback
 - `POST /api/v1/auth/google/token` - Google token verification
 
-For detailed API documentation, see the [SDD](./SDD/Smart-Price-Tracker-SDD.md#6-api-design).
+### Scraper
+- `GET /api/v1/scraper/supported-platforms` - Get supported platforms (public)
+- `POST /api/v1/scraper/scrape` - Scrape and track new product (auth required)
+- `POST /api/v1/scraper/update/:productId` - Manually update product price (auth required)
+- `POST /api/v1/scraper/bulk-update` - Bulk update products (auth required)
+
+### Products
+- `GET /api/v1/products` - Get all tracked products (auth required)
+- `GET /api/v1/products/:productId` - Get product details (auth required)
+- `GET /api/v1/products/:productId/price-history` - Get price history (auth required)
+- `GET /api/v1/products/stats/by-platform` - Get product statistics (auth required)
+- `DELETE /api/v1/products/:productId` - Delete product (auth required)
+
+### Alerts
+- `POST /api/v1/alerts` - Create price alert (auth required)
+- `GET /api/v1/alerts` - Get all alerts (auth required)
+- `PATCH /api/v1/alerts/:alertId` - Update alert (auth required)
+- `DELETE /api/v1/alerts/:alertId` - Delete alert (auth required)
+- `POST /api/v1/alerts/:alertId/deactivate` - Deactivate alert (auth required)
+
+For detailed API documentation, see the [SDD](./SDD/Smart-Price-Tracker-SDD.md#6-api-design) or [Backend README](./backend/README.md).
 
 ## 🚢 Deployment
 
@@ -302,6 +411,10 @@ This project is licensed under the ISC License.
 
 **Smart Price Tracker Development Team**
 
+- Varun Singh (2547254)
+- Ananya M (2547259)
+- Prajwal KT (2547239)
+
 ## 📧 Contact
 
 For questions, suggestions, or issues:
@@ -310,10 +423,10 @@ For questions, suggestions, or issues:
 
 ## 🗺️ Roadmap
 
-- [x] **Phase 1**: Authentication & Basic UI (Current)
-- [ ] **Phase 2**: Product tracking & price scraping
-- [ ] **Phase 3**: Price alerts & notifications
-- [ ] **Phase 4**: Advanced features & mobile app
+- [x] **Phase 1**: Authentication & Basic UI ✅
+- [x] **Phase 2**: Product tracking & price scraping ✅
+- [ ] **Phase 3**: Advanced visualizations & notifications
+- [ ] **Phase 4**: Mobile app & browser extension
 - [ ] **Phase 5**: Premium features & monetization
 
 For detailed roadmap, see [Future Enhancements](./SDD/Smart-Price-Tracker-SDD.md#11-future-enhancements) in the SDD.
@@ -329,4 +442,4 @@ For detailed roadmap, see [Future Enhancements](./SDD/Smart-Price-Tracker-SDD.md
 
 **Built with ❤️ by the Smart Price Tracker Team**
 
-*Last Updated: February 21, 2026*
+*Last Updated: February 26, 2026*

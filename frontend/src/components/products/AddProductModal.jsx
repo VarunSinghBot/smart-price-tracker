@@ -94,23 +94,38 @@ function AddProductModal({ onClose, prefilledUrl, onProductAdded }) {
     };
 
     const handleTrackProduct = async (product) => {
-        showSuccessToast(`${product.title} has been added to your tracker!`);
-        
-        // Refresh products list
-        await dispatch(fetchProducts());
-        
-        // Notify parent component
-        if (onProductAdded) {
-            onProductAdded();
+        try {
+            showInfoToast('Adding product to tracker...');
+            
+            // Actually save the product to the database
+            const result = await dispatch(scrapeNewProduct(product.url)).unwrap();
+            
+            if (!result) {
+                showErrorToast('Failed to add product. Please try again.');
+                return;
+            }
+            
+            showSuccessToast(`${product.title} has been added to your tracker!`);
+            
+            // Refresh products list
+            await dispatch(fetchProducts());
+            
+            // Notify parent component
+            if (onProductAdded) {
+                onProductAdded();
+            }
+            
+            // Reset and close
+            setUrl('');
+            setDetectedProducts([]);
+            setSimilarProducts([]);
+            setPlatformResults([]);
+            setShowResults(false);
+            onClose();
+        } catch (error) {
+            console.error('Error adding product:', error);
+            showErrorToast(error || 'Failed to add product. Please try again.');
         }
-        
-        // Reset and close
-        setUrl('');
-        setDetectedProducts([]);
-        setSimilarProducts([]);
-        setPlatformResults([]);
-        setShowResults(false);
-        onClose();
     };
 
     return (
