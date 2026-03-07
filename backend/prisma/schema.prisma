@@ -33,11 +33,12 @@ model Product {
   title        String
   platform     String         // Platform name (Amazon, eBay, Flipkart, etc.)
   imageUrl     String?        // Product image
+  imageHash    String?        // Perceptual hash of product image for fast matching
   currentPrice Float?         // Latest known price
   currency     String         @default("USD")
   inStock      Boolean        @default(true)
   productId    String?        // Platform-specific product ID (ASIN, etc.)
-  metadata     Json?          // Additional flexible data (brand, specs, rating, etc.)
+  metadata     Json?          // Additional flexible data (brand, specs, rating, modelNumber, sku, etc.)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   lastChecked  DateTime       @default(now())

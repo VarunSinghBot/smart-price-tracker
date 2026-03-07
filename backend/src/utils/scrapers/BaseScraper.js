@@ -30,21 +30,52 @@ class BaseScraper {
                     '--disable-dev-shm-usage',
                     '--disable-accelerated-2d-canvas',
                     '--disable-gpu',
-                    '--window-size=1920x1080'
+                    '--window-size=1920x1080',
+                    '--disable-blink-features=AutomationControlled'
                 ],
                 ...options
             });
 
             this.context = await this.browser.newContext({
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                 viewport: { width: 1920, height: 1080 },
-                locale: 'en-US',
-                timezoneId: 'America/New_York',
-                ignoreHTTPSErrors: true
+                locale: 'en-IN',
+                timezoneId: 'Asia/Kolkata',
+                ignoreHTTPSErrors: true,
+                extraHTTPHeaders: {
+                    'Accept-Language': 'en-IN,en-US;q=0.9,en;q=0.8',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Ch-Ua': '"Chromium";v="131", "Not_A Brand";v="8"',
+                    'Sec-Ch-Ua-Mobile': '?0',
+                    'Sec-Ch-Ua-Platform': '"Windows"'
+                }
             });
 
             this.page = await this.context.newPage();
             await this.page.setDefaultTimeout(this.timeout);
+            
+            // Additional anti-bot stealth
+            await this.page.addInitScript(() => {
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                });
+            });
+            
+            // Request interception: Block unnecessary resources for performance
+            await this.page.route('**/*', route => {
+                const resourceType = route.request().resourceType();
+                if (['font', 'stylesheet', 'media'].includes(resourceType)) {
+                    route.abort();
+                } else {
+                    route.continue();
+                }
+            });
             
             logger.info('Browser initialized successfully');
         } catch (error) {
@@ -69,8 +100,14 @@ class BaseScraper {
                     timeout: this.timeout
                 });
                 
+                // Wait for network to be idle
+                await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+                
+                // Detect bot protection
+                await this.detectBotProtection();
+                
                 // Random delay to mimic human behavior
-                await this.randomDelay(1000, 3000);
+                await this.randomDelay(500, 1500);
                 return;
             } catch (error) {
                 lastError = error;
@@ -86,13 +123,43 @@ class BaseScraper {
     }
 
     /**
+     * Detect bot protection (CAPTCHA, access denied, etc.)
+     * @throws {Error} if bot protection detected
+     */
+    async detectBotProtection() {
+        try {
+            const title = await this.page.title();
+            const bodyText = await this.page.evaluate(() => 
+                document.body?.innerText?.toLowerCase() || ''
+            ).catch(() => '');
+
+            if (
+                title.toLowerCase().includes('captcha') ||
+                title.toLowerCase().includes('access denied') ||
+                bodyText.includes('enter the characters you see below') ||
+                bodyText.includes('security check') ||
+                bodyText.includes('unusual traffic') ||
+                bodyText.includes('verify you are human')
+            ) {
+                logger.error('Bot protection detected', { title });
+                throw new Error('Bot protection detected');
+            }
+        } catch (error) {
+            if (error.message === 'Bot protection detected') {
+                throw error;
+            }
+            // Ignore other errors during detection
+        }
+    }
+
+    /**
      * Random delay to mimic human behavior
      * @param {number} min - Minimum delay in ms
      * @param {number} max - Maximum delay in ms
      */
     async randomDelay(min = 1000, max = 3000) {
         const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-        await this.page.waitForTimeout(delay);
+        await new Promise(resolve => setTimeout(resolve, delay));
     }
 
     /**
@@ -182,11 +249,10 @@ class BaseScraper {
     extractPrice(text) {
         if (!text) return null;
         
-        // Remove currency symbols and extract numeric value
-        const priceMatch = text.match(/[\d,]+\.?\d*/);
-        if (!priceMatch) return null;
+        // Remove all non-digit and non-decimal characters
+        const cleaned = text.replace(/[^\d.]/g, '');
+        const price = parseFloat(cleaned);
         
-        const price = parseFloat(priceMatch[0].replace(/,/g, ''));
         return isNaN(price) ? null : price;
     }
 

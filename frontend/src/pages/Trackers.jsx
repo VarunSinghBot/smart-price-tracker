@@ -7,6 +7,7 @@ import { fetchProducts, removeProduct } from '../store/productSlice';
 import { fetchAlerts, modifyAlert, removeAlert, toggleAlert } from '../store/alertSlice';
 import AddProductModal from '../components/products/AddProductModal';
 import SetAlertModal from '../components/products/SetAlertModal';
+import FindSimilarProductsModal from '../components/products/FindSimilarProductsModal';
 import { updatePrice, addToSearchHistory } from '../store/scraperSlice';
 
 function Trackers() {
@@ -24,6 +25,8 @@ function Trackers() {
   const [productForAlert, setProductForAlert] = useState(null);
   const [editingAlertPrice, setEditingAlertPrice] = useState(0);
   const [editingAlertId, setEditingAlertId] = useState(null);
+  const [showFindSimilarModal, setShowFindSimilarModal] = useState(false);
+  const [productForSimilar, setProductForSimilar] = useState(null);
 
   // Load data on mount
   useEffect(() => {
@@ -127,7 +130,13 @@ function Trackers() {
 
   // Calculate price drop percentage
   const calculatePriceDrop = (currentPrice, alertPrice) => {
-    if (!currentPrice || !alertPrice) return 0;
+    
+
+  // Handle find similar products
+  const handleFindSimilar = (product) => {
+    setProductForSimilar(product);
+    setShowFindSimilarModal(true);
+  };if (!currentPrice || !alertPrice) return 0;
     return ((currentPrice - alertPrice) / currentPrice * 100).toFixed(1);
   };
 
@@ -284,27 +293,37 @@ function Trackers() {
                   </div>
                   
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="p-4 pt-0 space-y-2">
                     <button
-                      onClick={() => window.open(product.url, '_blank')}
-                      className="py-2 px-3 bg-[#F4A460] text-white text-xs font-bold hover:bg-[#E89450] transition-colors border-2 border-black"
+                      onClick={() => handleFindSimilar(product)}
+                      className="w-full py-2 px-3 bg-linear-to-r from-blue-500 to-purple-500 text-white text-xs font-bold hover:from-blue-600 hover:to-purple-600 transition-all border-2 border-black flex items-center justify-center gap-1"
                     >
-                      View Product
+                      <span>🔍</span>
+                      <span>Find on Other Sites</span>
                     </button>
-                    {product.alert && (
+                    
+                    <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => handleToggleActive(product.alert)}
-                        className="py-2 px-3 bg-white text-gray-800 text-xs font-bold hover:bg-gray-100 transition-colors border-2 border-black"
+                        onClick={() => window.open(product.url, '_blank')}
+                        className="py-2 px-3 bg-[#F4A460] text-white text-xs font-bold hover:bg-[#E89450] transition-colors border-2 border-black"
                       >
-                        {product.alert.active ? 'Pause' : 'Activate'}
+                        View Product
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleRemoveProduct(product.id)}
-                      className={`py-2 px-3 bg-white text-red-600 text-xs font-bold hover:bg-red-50 transition-colors border-2 border-red-600 ${product.alert ? '' : 'col-span-2'}`}
-                    >
-                      Remove
-                    </button>
+                      {product.alert && (
+                        <button
+                          onClick={() => handleToggleActive(product.alert)}
+                          className="py-2 px-3 bg-white text-gray-800 text-xs font-bold hover:bg-gray-100 transition-colors border-2 border-black"
+                        >
+                          {product.alert.active ? 'Pause' : 'Activate'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRemoveProduct(product.id)}
+                        className={`py-2 px-3 bg-white text-red-600 text-xs font-bold hover:bg-red-50 transition-colors border-2 border-red-600 ${product.alert ? '' : 'col-span-2'}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -372,6 +391,18 @@ function Trackers() {
       {showAddModal && (
         <AddProductModal 
           onClose={() => setShowAddModal(false)}
+        />
+      )}
+
+      {/* Find Similar Products Modal */}
+      {showFindSimilarModal && productForSimilar && (
+        <FindSimilarProductsModal
+          product={productForSimilar}
+          isOpen={showFindSimilarModal}
+          onClose={() => {
+            setShowFindSimilarModal(false);
+            setProductForSimilar(null);
+          }}
         />
       )}
 

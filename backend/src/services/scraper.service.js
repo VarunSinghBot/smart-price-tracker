@@ -1,4 +1,8 @@
 import ScraperFactory from '../utils/scrapers/ScraperFactory.js';
+import AmazonSearchScraper from '../utils/scrapers/AmazonSearchScraper.js';
+import FlipkartSearchScraper from '../utils/scrapers/FlipkartSearchScraper.js';
+import EbaySearchScraper from '../utils/scrapers/EbaySearchScraper.js';
+import pLimit from 'p-limit';
 import prisma from '../utils/prisma.js';
 import Logger from '../utils/logger.js';
 
@@ -67,6 +71,24 @@ class ScraperService {
     }
 
     /**
+     * Get search scraper for platform
+     * @param {string} platform - Platform name
+     * @returns {Object} - Search scraper instance
+     */
+    static getSearchScraper(platform) {
+        switch (platform.toLowerCase()) {
+            case 'amazon':
+                return new AmazonSearchScraper();
+            case 'flipkart':
+                return new FlipkartSearchScraper();
+            case 'ebay':
+                return new EbaySearchScraper();
+            default:
+                throw new Error(`No search scraper for platform: ${platform}`);
+        }
+    }
+
+    /**
      * Search and scrape products across multiple platforms
      * @param {string} url - Original product URL
      * @param {Array<string>} platformsToSearch - Platforms to search on (optional)
@@ -87,16 +109,21 @@ class ScraperService {
 
             // Step 3: Determine which platforms to search
             const allPlatforms = ScraperFactory.getSupportedPlatforms();
-            const platformsToQuery = platformsToSearch || allPlatforms.filter(p => p !== mainPlatform);
+            const platformsToQuery = platformsToSearch || allPlatforms.filter(p => p.toLowerCase() !== mainPlatform.toLowerCase());
 
-            // Step 4: Scrape search results from other platforms in parallel
-            const searchPromises = platformsToQuery.map(async (platform) => {
+            // Step 4: Scrape search results from other platforms with concurrency limit
+            const concurrencyLimit = pLimit(3); // Max 3 concurrent platform searches
+            
+            const searchPromises = platformsToQuery.map(platform =>
+                concurrencyLimit(async () => {
                 try {
-                    const searchUrl = this.buildSearchUrl(platform, searchQuery);
-                    logger.info(`Scraping search results for ${platform}`, { searchUrl });
+                    logger.info(`Searching on ${platform}`, { searchQuery });
 
-                    // Actually scrape the search results (limit to 5 products per platform)
-                    const products = await ScraperFactory.scrapeSearchResults(searchUrl, 5);
+                    // Use the new search scrapers
+                    const searchScraper = this.getSearchScraper(platform);
+                    const products = await searchScraper.searchProducts(searchQuery, limit);
+                    
+                    const searchUrl = this.buildSearchUrl(platform, searchQuery);
                     
                     return {
                         success: true,
@@ -106,7 +133,7 @@ class ScraperService {
                         totalFound: products.length
                     };
                 } catch (error) {
-                    logger.error(`Failed to scrape search results for ${platform}`, { error: error.message });
+                    logger.error(`Failed to search ${platform}`, { error: error.message });
                     
                     // Still return search URL as fallback
                     const searchUrl = this.buildSearchUrl(platform, searchQuery);
@@ -118,7 +145,8 @@ class ScraperService {
                         error: error.message
                     };
                 }
-            });
+                })
+            );
 
             // Wait for all searches to complete (with graceful error handling)
             const searchResults = await Promise.allSettled(searchPromises);
@@ -150,12 +178,13 @@ class ScraperService {
                 searchQuery,
                 platformResults,
                 similarProducts,
-                totalSearched: successfulSearches.length,
-                totalProductsFound
+                totalProductsFound,
+                searchedPlatforms: platformsToQuery,
+                successfulSearches: successfulSearches.length
             };
 
         } catch (error) {
-            logger.error('Cross-platform search failed', { error: error.message });
+            logger.error('Cross-platform search failed', { error: error.message, stack: error.stack });
             throw error;
         }
     }

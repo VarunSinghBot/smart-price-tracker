@@ -5,6 +5,7 @@ import axios from "axios";
 import { showSuccessToast, showWarningToast, showErrorToast } from "../components/ui/Toast";
 import { searchCrossPlatform, scrapeNewProduct, scrapeMultiPlatform, clearScrapedProduct } from "../store/scraperSlice";
 import { fetchProducts } from "../store/productSlice";
+import FindSimilarProductsModal from "../components/products/FindSimilarProductsModal";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
@@ -26,6 +27,8 @@ function DashboardLayout({ children }) {
     flipkart: "",
     ebay: ""
   });
+  const [showFindSimilarModal, setShowFindSimilarModal] = useState(false);
+  const [productForSimilar, setProductForSimilar] = useState(null);
 
   // Sync activeTab with current route
   useEffect(() => {
@@ -150,6 +153,12 @@ function DashboardLayout({ children }) {
         showErrorToast('Failed to track product. Please try again.');
       }
     }
+  };
+
+  // Handle find similar products
+  const handleFindSimilar = (product) => {
+    setProductForSimilar(product);
+    setShowFindSimilarModal(true);
   };
 
   // Close modal and reset
@@ -647,13 +656,28 @@ function DashboardLayout({ children }) {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="mt-6 flex gap-4">
+                    <div className="mt-6 space-y-4">
                       <button
-                        onClick={handleTrackProduct}
-                        className="flex-1 py-4 px-6 bg-[#F4A460] text-white font-bold text-lg uppercase hover:bg-[#E89450] transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+                        onClick={() => handleFindSimilar(scrapedProduct)}
+                        className="w-full py-4 px-6 bg-linear-to-r from-blue-500 to-purple-500 text-white font-bold text-lg uppercase hover:from-blue-600 hover:to-purple-600 transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-3"
                       >
-                        📌 Track This Product
+                        <span className="text-2xl">🔍</span>
+                        <span>Find on Other Sites</span>
                       </button>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={handleTrackProduct}
+                          className="flex-1 py-4 px-6 bg-[#F4A460] text-white font-bold text-lg uppercase hover:bg-[#E89450] transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+                        >
+                          📌 Track This Product
+                        </button>
+                        <button
+                          onClick={() => window.open(scrapedProduct.url, '_blank')}
+                          className="py-4 px-8 bg-white text-gray-800 font-bold uppercase hover:bg-[#E8DCC4] transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
+                        >
+                          🔗 View Original
+                        </button>
+                      </div>
                       <button
                         onClick={() => window.open(scrapedProduct.url, '_blank')}
                         className="py-4 px-8 bg-white text-gray-800 font-bold uppercase hover:bg-[#E8DCC4] transition-all border-4 border-black drop-shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]"
@@ -802,6 +826,18 @@ function DashboardLayout({ children }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Find Similar Products Modal */}
+      {showFindSimilarModal && productForSimilar && (
+        <FindSimilarProductsModal
+          product={productForSimilar}
+          isOpen={showFindSimilarModal}
+          onClose={() => {
+            setShowFindSimilarModal(false);
+            setProductForSimilar(null);
+          }}
+        />
       )}
     </div>
   );

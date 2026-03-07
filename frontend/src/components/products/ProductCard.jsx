@@ -4,7 +4,7 @@ import { updatePrice } from '../../store/scraperSlice';
 import { fetchProducts } from '../../store/productSlice';
 import { showSuccessToast, showErrorToast, showInfoToast } from '../ui/Toast';
 
-function ProductCard({ product, onSetAlert, onViewDetails, onRemove }) {
+function ProductCard({ product, onSetAlert, onViewDetails, onRemove, onFindSimilar }) {
     const dispatch = useDispatch();
     const [updating, setUpdating] = useState(false);
 
@@ -108,6 +108,15 @@ function ProductCard({ product, onSetAlert, onViewDetails, onRemove }) {
 
                 {/* Actions */}
                 <div className="mt-auto space-y-2">
+                    {/* Find Similar Button - Prominent */}
+                    <button
+                        onClick={() => onFindSimilar && onFindSimilar(product)}
+                        className="w-full px-3 py-2 bg-linear-to-r from-blue-500 to-purple-500 text-white text-xs font-bold border-2 border-black hover:from-blue-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2"
+                    >
+                        <span>🔍</span>
+                        <span>Find on Other Sites</span>
+                    </button>
+
                     <div className="grid grid-cols-2 gap-2">
                         <button
                             onClick={() => onSetAlert(product)}

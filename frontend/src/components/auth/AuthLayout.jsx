@@ -1,21 +1,20 @@
 import { Outlet } from "react-router-dom";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
 
 function AuthLayout() {
   return (
-    <div className="w-full h-dvh flex">
-      {/* Left Side - Gradient Background with Image */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <img
-          src="/UserAuthImage.svg"
-          alt="Authentication"
-          className="w-full h-full object-cover"
-        />
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#E8DCC4]">
+      <Navbar />
 
-      {/* Right Side - Auth Forms */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white">
-        <Outlet />
-      </div>
+      {/* Auth Form Container */}
+      <main className="grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md bg-white border-4 border-black p-8 sm:p-10 drop-shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+          <Outlet />
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }

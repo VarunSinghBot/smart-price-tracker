@@ -8,6 +8,7 @@ import { fetchSupportedPlatforms, addToSearchHistory } from '../store/scraperSli
 import AddProductModal from '../components/products/AddProductModal';
 import SetAlertModal from '../components/products/SetAlertModal';
 import RemoveProductModal from '../components/products/RemoveProductModal';
+import FindSimilarProductsModal from '../components/products/FindSimilarProductsModal';
 import ProductCard from '../components/products/ProductCard';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 
@@ -39,6 +40,8 @@ function Dashboard() {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [showFindSimilarModal, setShowFindSimilarModal] = useState(false);
+  const [productForSimilar, setProductForSimilar] = useState(null);
   
   // Filter and pagination states
   const [selectedCategory, setSelectedCategory] = useState('Everything');
@@ -124,6 +127,12 @@ function Dashboard() {
       setShowRemoveModal(false);
       setSelectedProductForRemoval(null);
     }
+  };
+
+  // Handle find similar products
+  const handleFindSimilar = (product) => {
+    setProductForSimilar(product);
+    setShowFindSimilarModal(true);
   };
 
   // Get categories from products
@@ -428,7 +437,7 @@ function Dashboard() {
     <DashboardLayout>
       {/* Welcome Section */}
       <div className="mb-6">
-        <div className="bg-[#E8DCC4] border-3 border-black p-6 drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+        <div className="bg-[#ffffff] border-3 border-black p-6 drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
             Welcome back, {user?.name?.toUpperCase() || user?.username?.toUpperCase() || "VARUN SINGH"} {user?.id || "2547254"}!
           </h1>
@@ -612,26 +621,44 @@ function Dashboard() {
                   </p>
                   
                   {selectedProductForDetails.isTracked ? (
-                    <button 
-                      onClick={() => {
-                        setSelectedProductForAlert(selectedProductForDetails);
-                        setShowSetAlertModal(true);
-                      }}
-                      className="w-full py-3 bg-white border-2 border-[#6B9B8E] text-gray-800 font-medium mb-3 hover:bg-gray-50 transition-colors hover:cursor-pointer"
-                    >
-                      📌 Set Price Alert
-                    </button>
+                    <>
+                      <button 
+                        onClick={() => {
+                          setSelectedProductForAlert(selectedProductForDetails);
+                          setShowSetAlertModal(true);
+                        }}
+                        className="w-full py-3 bg-white border-2 border-[#6B9B8E] text-gray-800 font-medium mb-3 hover:bg-gray-50 transition-colors hover:cursor-pointer"
+                      >
+                        📌 Set Price Alert
+                      </button>
+                      <button 
+                        onClick={() => handleFindSimilar(selectedProductForDetails)}
+                        className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 text-white font-bold mb-3 hover:from-blue-600 hover:to-purple-600 transition-colors hover:cursor-pointer border-2 border-black flex items-center justify-center gap-2"
+                      >
+                        <span>🔍</span>
+                        <span>Find on Other Sites</span>
+                      </button>
+                    </>
                   ) : (
-                    <button 
-                      onClick={() => {
-                        // Pre-fill the add product modal with the product URL
-                        setPrefilledProductUrl(selectedProductForDetails.url);
-                        setShowAddProductModal(true);
-                      }}
-                      className="w-full py-3 bg-[#6B9B8E] border-2 border-black text-white font-bold mb-3 hover:bg-[#5A8A7D] transition-colors hover:cursor-pointer"
-                    >
-                      ➕ Add to Tracker
-                    </button>
+                    <>
+                      <button 
+                        onClick={() => {
+                          // Pre-fill the add product modal with the product URL
+                          setPrefilledProductUrl(selectedProductForDetails.url);
+                          setShowAddProductModal(true);
+                        }}
+                        className="w-full py-3 bg-[#6B9B8E] border-2 border-black text-white font-bold mb-3 hover:bg-[#5A8A7D] transition-colors hover:cursor-pointer"
+                      >
+                        ➕ Add to Tracker
+                      </button>
+                      <button 
+                        onClick={() => handleFindSimilar(selectedProductForDetails)}
+                        className="w-full py-3 bg-linear-to-r from-blue-500 to-purple-500 text-white font-bold mb-3 hover:from-blue-600 hover:to-purple-600 transition-colors hover:cursor-pointer border-2 border-black flex items-center justify-center gap-2"
+                      >
+                        <span>🔍</span>
+                        <span>Find on Other Sites</span>
+                      </button>
+                    </>
                   )}
                   <button 
                     onClick={() => window.open(selectedProductForDetails.url, '_blank')}
@@ -766,6 +793,18 @@ function Dashboard() {
               setSelectedProductForRemoval(null);
             }}
             onConfirm={confirmRemoveProduct}
+          />
+        )}
+
+        {/* Find Similar Products Modal */}
+        {showFindSimilarModal && productForSimilar && (
+          <FindSimilarProductsModal
+            product={productForSimilar}
+            isOpen={showFindSimilarModal}
+            onClose={() => {
+              setShowFindSimilarModal(false);
+              setProductForSimilar(null);
+            }}
           />
         )}
     </DashboardLayout>

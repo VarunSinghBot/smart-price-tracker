@@ -7,6 +7,10 @@ import {
     scrapeMultiPlatform,
     searchCrossPlatform
 } from '../controllers/scraper.controller.js';
+import {
+    findSimilarProducts,
+    getSupportedPlatformsForSearch
+} from '../controllers/productMatcher.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { validate, productSchemas } from '../middlewares/validation.middleware.js';
 
@@ -18,6 +22,13 @@ const router = Router();
  * @access Public
  */
 router.get('/supported-platforms', getSupportedPlatforms);
+
+/**
+ * @route GET /api/v1/scraper/supported-platforms-search
+ * @desc Get platforms that support advanced search and matching
+ * @access Public
+ */
+router.get('/supported-platforms-search', getSupportedPlatformsForSearch);
 
 // Authentication required for scraping operations
 router.use(verifyJWT);
@@ -65,5 +76,12 @@ router.post('/scrape-multi-platform', scrapeMultiPlatform);
  * @access Private
  */
 router.post('/search-cross-platform', searchCrossPlatform);
+
+/**
+ * @route POST /api/v1/scraper/find-similar
+ * @desc Find the SAME product across platforms using image & text similarity matching
+ * @access Private
+ */
+router.post('/find-similar', findSimilarProducts);
 
 export default router;

@@ -27,7 +27,7 @@ function Signup() {
 
   const validatePassword = () => {
     const passwordRequirements = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
-    
+
     if (formData.password.length < 8) {
       return "Password must be at least 8 characters";
     }
@@ -59,8 +59,8 @@ function Signup() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/auth/signup`,
+      const response = await api.post(
+        "/auth/signup",
         {
           email: formData.email,
           username: formData.username,
@@ -72,8 +72,7 @@ function Signup() {
         }
       );
 
-      // Store token in localStorage
-      localStorage.setItem("accessToken", response.data.data.accessToken);
+      // Store user data in localStorage (token is handled via cookies)
       localStorage.setItem("user", JSON.stringify(response.data.data.user));
 
       // Show success toast
@@ -85,8 +84,8 @@ function Signup() {
       }, 1000);
     } catch (err) {
       const errorMessage = err.response?.data?.message ||
-          err.response?.data?.errors?.[0]?.message ||
-          "An error occurred during signup";
+        err.response?.data?.errors?.[0]?.message ||
+        "An error occurred during signup";
       setError(errorMessage);
       showErrorToast(errorMessage);
     } finally {
@@ -95,177 +94,181 @@ function Signup() {
   };
 
   return (
-    <div className="w-full max-w-md">
-      <button
-        onClick={() => navigate("/")}
-        className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition-colors"
-        aria-label="Close"
-      >
-        ✕
-      </button>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Create an account
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Log in
-            </Link>
-          </p>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Google Sign-In Button */}
-          <div className="mb-6">
-            <GoogleSignInButton />
+    <div className="w-full">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-[#6B9B8E] flex items-center justify-center border-2 border-black">
+            <span className="text-white font-bold text-xl">$</span>
           </div>
+          <span className="text-sm font-bold text-[#6B9B8E]">SMART PRICE TRACKER</span>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Create an account
+        </h1>
+        <p className="text-gray-600">
+          Already have an account?{" "}
+          <Link to="/login" className="text-[#6B9B8E] font-semibold hover:text-[#5A8A7D] transition-colors">
+            Log in
+          </Link>
+        </p>
+      </div>
 
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-            </div>
-          </div>
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border-2 border-black text-red-700 font-medium text-sm drop-shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+          {error}
+        </div>
+      )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                User name
-              </label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder=""
-                required
-                minLength={3}
-                maxLength={30}
-              />
-            </div>
+      {/* Google Sign-In Button */}
+      <div className="mb-6">
+        <GoogleSignInButton />
+      </div>
 
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Email address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder=""
-                required
-              />
-            </div>
+      {/* Divider */}
+      <div className="relative mb-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t-2 border-black"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-3 bg-white text-gray-600 font-semibold">Or continue with email</span>
+        </div>
+      </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all pr-12"
-                  placeholder=""
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Use 8 or more characters with a mix of letters, numbers & symbols
-              </p>
-            </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label
+            htmlFor="username"
+            className="block text-sm font-bold text-gray-900 mb-2"
+          >
+            User name
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border-2 border-black text-gray-800 font-medium focus:outline-none focus:border-[#6B9B8E] transition-colors"
+            placeholder=""
+            required
+            minLength={3}
+            maxLength={30}
+          />
+        </div>
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Confirm Password
-              </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder=""
-                required
-              />
-            </div>
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-sm font-bold text-gray-900 mb-2"
+          >
+            Email address
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border-2 border-black text-gray-800 font-medium focus:outline-none focus:border-[#6B9B8E] transition-colors"
+            placeholder=""
+            required
+          />
+        </div>
 
-            <div className="text-sm text-gray-600">
-              By creating an account, you agree to our{" "}
-              <Link to="/terms" className="text-blue-600 hover:underline">
-                Terms of Use
-              </Link>{" "}
-              and{" "}
-              <Link to="/privacy" className="text-blue-600 hover:underline">
-                Privacy Policy
-              </Link>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="notRobot"
-                required
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="notRobot" className="ml-2 text-sm text-gray-700">
-                I'm not a robot
-              </label>
-            </div>
-
+        <div>
+          <label
+            htmlFor="password"
+            className="block text-sm font-bold text-gray-900 mb-2"
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border-2 border-black text-gray-800 font-medium focus:outline-none focus:border-[#6B9B8E] transition-colors pr-16"
+              placeholder=""
+              required
+              minLength={8}
+            />
             <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 cursor-pointer rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B9B8E] hover:text-[#5A8A7D] font-semibold text-sm cursor-pointer"
             >
-              {isLoading ? "Creating account..." : "Create an account"}
+              {showPassword ? "Hide" : "Show"}
             </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Log in
-            </Link>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 font-medium">
+            Use 8 or more characters with a mix of letters, numbers & symbols
           </p>
         </div>
+
+        <div>
+          <label
+            htmlFor="confirmPassword"
+            className="block text-sm font-bold text-gray-900 mb-2"
+          >
+            Confirm Password
+          </label>
+          <input
+            type={showPassword ? "text" : "password"}
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border-2 border-black text-gray-800 font-medium focus:outline-none focus:border-[#6B9B8E] transition-colors"
+            placeholder=""
+            required
+          />
+        </div>
+
+        <div className="text-sm text-gray-600">
+          By creating an account, you agree to our{" "}
+          <Link to="/terms" className="text-[#6B9B8E] font-semibold hover:text-[#5A8A7D]">
+            Terms of Use
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-[#6B9B8E] font-semibold hover:text-[#5A8A7D]">
+            Privacy Policy
+          </Link>
+        </div>
+
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="notRobot"
+            required
+            className="w-4 h-4 accent-[#6B9B8E] border-2 border-black"
+          />
+          <label htmlFor="notRobot" className="ml-2 text-sm text-gray-700 font-medium cursor-pointer">
+            I'm not a robot
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-[#F4A460] text-white py-3 font-bold hover:bg-[#E89450] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed border-2 border-black cursor-pointer drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:drop-shadow-[6px_6px_0px_rgba(0,0,0,1)]"
+        >
+          {isLoading ? "Creating account..." : "Create an account"}
+        </button>
+      </form>
+
+      {/* Bottom Link */}
+      <p className="mt-6 text-center text-sm text-gray-600">
+        Already have an account?{" "}
+        <Link to="/login" className="text-[#6B9B8E] font-semibold hover:text-[#5A8A7D] transition-colors">
+          Log in
+        </Link>
+      </p>
+    </div>
   );
 }
 
