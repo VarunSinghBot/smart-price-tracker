@@ -155,6 +155,41 @@ class TextSimilarity {
     }
 
     /**
+     * Infer high-level product category from title tokens.
+     * Returns null when category confidence is low.
+     * @param {string} title - Product title
+     * @returns {string|null} - Inferred category
+     */
+    static inferCategory(title) {
+        if (!title) return null;
+
+        const keywords = this.extractKeywords(title);
+        if (keywords.length === 0) return null;
+
+        const categoryRules = {
+            mobile: ['iphone', 'smartphone', 'mobile', 'android', 'galaxy', 'oneplus', 'pixel'],
+            laptop: ['laptop', 'notebook', 'macbook', 'ultrabook', 'chromebook'],
+            tv: ['television', 'smarttv', 'oled', 'qled', 'ledtv', 'tv'],
+            audio: ['headphone', 'earphone', 'earbuds', 'speaker', 'soundbar', 'airpods'],
+            furniture: ['chair', 'table', 'sofa', 'stool', 'desk', 'cabinet', 'wardrobe'],
+            appliance: ['fridge', 'refrigerator', 'washing', 'microwave', 'ac', 'cooler', 'heater'],
+        };
+
+        let bestCategory = null;
+        let bestHits = 0;
+
+        for (const [category, terms] of Object.entries(categoryRules)) {
+            const hits = keywords.filter(token => terms.includes(token)).length;
+            if (hits > bestHits) {
+                bestHits = hits;
+                bestCategory = category;
+            }
+        }
+
+        return bestHits > 0 ? bestCategory : null;
+    }
+
+    /**
      * Calculate Dice's coefficient similarity (0-100)
      * @param {string} str1 - First string
      * @param {string} str2 - Second string

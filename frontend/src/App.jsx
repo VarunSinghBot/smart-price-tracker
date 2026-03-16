@@ -17,7 +17,7 @@ import Notifications from './pages/Notifications'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import Contact from './pages/Contact'
-import ErrPage from './ErrPage';
+import ErrPage from './pages/ErrPage.jsx'
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import ToastContainer from './components/ui/ToastContainer';
 

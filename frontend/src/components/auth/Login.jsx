@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../../utils/api";
 import GoogleSignInButton from "./GoogleSignInButton";
 import { showSuccessToast, showErrorToast } from "../ui/Toast";
+import { setAuthData } from "../../utils/auth";
 
 function Login() {
   const navigate = useNavigate();
@@ -38,8 +39,8 @@ function Login() {
         }
       );
 
-      // Store user data in localStorage (token is handled via cookies)
-      localStorage.setItem("user", JSON.stringify(response.data.data.user));
+      // Persist auth for route guards and API interceptors.
+      setAuthData(response.data.data.accessToken, response.data.data.user);
 
       // Show success toast
       showSuccessToast("Login successful! Redirecting to dashboard...");

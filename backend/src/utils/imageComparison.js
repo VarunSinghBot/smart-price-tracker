@@ -19,7 +19,7 @@ const httpsAgent = new https.Agent({
 
 /**
  * Image Comparison Utility for Product Matching
- * Uses perceptual hashing to compare product images
+ * Uses a 3-hash ensemble (pHash + dHash + aHash) to compare product images
  */
 class ImageComparison {
     /**
@@ -74,11 +74,11 @@ class ImageComparison {
     }
 
     /**
-     * Generate perceptual hash for an image
+     * Generate perceptual hash (pHash) for an image
      * @param {Buffer} imageBuffer - Image buffer
-     * @returns {Promise<string>} - Perceptual hash
+     * @returns {Promise<string>} - Binary pHash string
      */
-    static async generateHash(imageBuffer) {
+    static async generatePHash(imageBuffer) {
         let tempFilePath = null;
         
         try {
@@ -94,11 +94,11 @@ class ImageComparison {
             // Generate hash from file path
             const hash = await imageHashAsync(tempFilePath, 16, true);
             
-            logger.info('Generated image hash', { hash });
+            logger.info('Generated pHash');
             return hash;
         } catch (error) {
-            logger.error('Hash generation failed', { error: error.message });
-            throw new Error(`Hash generation failed: ${error.message}`);
+            logger.error('pHash generation failed', { error: error.message });
+            throw new Error(`pHash generation failed: ${error.message}`);
         } finally {
             // Clean up temporary file
             if (tempFilePath) {
@@ -109,6 +109,73 @@ class ImageComparison {
                 }
             }
         }
+    }
+
+    /**
+     * Generate dHash by comparing adjacent grayscale pixels (9x8 -> 64 bits)
+     * @param {Buffer} imageBuffer - Image buffer
+     * @returns {Promise<string>} - Binary dHash string
+     */
+    static async generateDHash(imageBuffer) {
+        const raw = await sharp(imageBuffer)
+            .resize(9, 8, { fit: 'fill' })
+            .grayscale()
+            .raw()
+            .toBuffer();
+
+        let hash = '';
+        for (let y = 0; y < 8; y++) {
+            for (let x = 0; x < 8; x++) {
+                const left = raw[y * 9 + x];
+                const right = raw[y * 9 + x + 1];
+                hash += left > right ? '1' : '0';
+            }
+        }
+        return hash;
+    }
+
+    /**
+     * Generate aHash using average grayscale pixel value (8x8 -> 64 bits)
+     * @param {Buffer} imageBuffer - Image buffer
+     * @returns {Promise<string>} - Binary aHash string
+     */
+    static async generateAHash(imageBuffer) {
+        const raw = await sharp(imageBuffer)
+            .resize(8, 8, { fit: 'fill' })
+            .grayscale()
+            .raw()
+            .toBuffer();
+
+        const avg = raw.reduce((sum, val) => sum + val, 0) / raw.length;
+        let hash = '';
+        for (const pixel of raw) {
+            hash += pixel >= avg ? '1' : '0';
+        }
+        return hash;
+    }
+
+    /**
+     * Generate all hashes used in ensemble scoring
+     * @param {Buffer} imageBuffer - Image buffer
+     * @returns {Promise<{pHash: string, dHash: string, aHash: string}>}
+     */
+    static async generateHashes(imageBuffer) {
+        const [pHash, dHash, aHash] = await Promise.all([
+            this.generatePHash(imageBuffer),
+            this.generateDHash(imageBuffer),
+            this.generateAHash(imageBuffer),
+        ]);
+
+        return { pHash, dHash, aHash };
+    }
+
+    /**
+     * Backwards-compatible single-hash helper (pHash)
+     * @param {Buffer} imageBuffer - Image buffer
+     * @returns {Promise<string>} - pHash
+     */
+    static async generateHash(imageBuffer) {
+        return this.generatePHash(imageBuffer);
     }
 
     /**
@@ -151,6 +218,30 @@ class ImageComparison {
     }
 
     /**
+     * Calculate weighted ensemble similarity using pHash + dHash + aHash
+     * dHash has highest weight to emphasize shape/structure differences.
+     * @param {{pHash: string, dHash: string, aHash: string}} sourceHashes - Source hashes
+     * @param {{pHash: string, dHash: string, aHash: string}} targetHashes - Target hashes
+     * @returns {{similarity: number, scores: {pHash: number, dHash: number, aHash: number}}}
+     */
+    static calculateEnsembleSimilarity(sourceHashes, targetHashes) {
+        const pScore = this.calculateSimilarity(sourceHashes.pHash, targetHashes.pHash);
+        const dScore = this.calculateSimilarity(sourceHashes.dHash, targetHashes.dHash);
+        const aScore = this.calculateSimilarity(sourceHashes.aHash, targetHashes.aHash);
+
+        const similarity = Math.round((pScore * 0.25 + dScore * 0.5 + aScore * 0.25) * 100) / 100;
+
+        return {
+            similarity,
+            scores: {
+                pHash: pScore,
+                dHash: dScore,
+                aHash: aScore,
+            },
+        };
+    }
+
+    /**
      * Compare two images and return similarity score
      * @param {string} imageUrl1 - First image URL
      * @param {string} imageUrl2 - Second image URL
@@ -168,26 +259,27 @@ class ImageComparison {
                 this.downloadImage(imageUrl2),
             ]);
 
-            // Generate hashes
-            const [hash1, hash2] = await Promise.all([
-                this.generateHash(buffer1),
-                this.generateHash(buffer2),
+            // Generate hash ensembles
+            const [hashes1, hashes2] = await Promise.all([
+                this.generateHashes(buffer1),
+                this.generateHashes(buffer2),
             ]);
 
-            // Calculate similarity
-            const similarity = this.calculateSimilarity(hash1, hash2);
+            // Calculate weighted ensemble similarity
+            const ensemble = this.calculateEnsembleSimilarity(hashes1, hashes2);
             const duration = Date.now() - startTime;
 
             logger.info('Image comparison complete', { 
-                similarity, 
+                similarity: ensemble.similarity,
                 duration: `${duration}ms` 
             });
 
             return {
-                similarity,
-                hash1,
-                hash2,
-                isMatch: similarity >= 70, // Threshold for match
+                similarity: ensemble.similarity,
+                hash1: hashes1.pHash,
+                hash2: hashes2.pHash,
+                hashScores: ensemble.scores,
+                isMatch: ensemble.similarity >= 70, // Threshold for match
                 duration,
             };
         } catch (error) {
@@ -224,7 +316,7 @@ class ImageComparison {
 
             // Download and hash source image once
             const sourceBuffer = await this.downloadImage(sourceImageUrl);
-            const sourceHash = await this.generateHash(sourceBuffer);
+            const sourceHashes = await this.generateHashes(sourceBuffer);
 
             // Use concurrency limit to avoid memory explosion
             const limit = pLimit(5); // Process max 5 images simultaneously
@@ -234,14 +326,15 @@ class ImageComparison {
                 targetImageUrls.map((targetUrl, index) => limit(async () => {
                     try {
                         const targetBuffer = await this.downloadImage(targetUrl);
-                        const targetHash = await this.generateHash(targetBuffer);
-                        const similarity = this.calculateSimilarity(sourceHash, targetHash);
+                        const targetHashes = await this.generateHashes(targetBuffer);
+                        const ensemble = this.calculateEnsembleSimilarity(sourceHashes, targetHashes);
 
                         return {
                             index,
                             targetUrl,
-                            similarity,
-                            isMatch: similarity >= minSimilarity,
+                            similarity: ensemble.similarity,
+                            hashScores: ensemble.scores,
+                            isMatch: ensemble.similarity >= minSimilarity,
                         };
                     } catch (error) {
                         logger.warn('Failed to compare with target image', { 
@@ -272,7 +365,8 @@ class ImageComparison {
 
             return {
                 sourceUrl: sourceImageUrl,
-                sourceHash,
+                sourceHash: sourceHashes.pHash,
+                sourceHashes,
                 results,
                 matches,
                 totalCompared: results.length,

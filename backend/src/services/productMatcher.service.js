@@ -175,9 +175,10 @@ class ProductMatcherService {
     }
 
     /**
-     * Match search results with source product using 2-stage matching
-     * Stage 1: Text pre-filter (cheap)
-     * Stage 2: Image comparison only on top candidates
+     * Match search results with staged strategy:
+     * 1) Title-first matching.
+     * 2) If no title matches, fallback to image-only matching.
+     * 3) If both title+image are available, rank candidates that are strong on both.
      * @param {Object} sourceProduct - Source product data
      * @param {Array} searchResults - Search results to match
      * @param {number} minConfidence - Minimum confidence threshold
@@ -185,10 +186,14 @@ class ProductMatcherService {
      */
     static async matchProducts(sourceProduct, searchResults, minConfidence = 70) {
         try {
-            logger.info('Matching products (2-stage)', { 
+            logger.info('Matching products (title-first)', {
                 sourceTitle: sourceProduct.title,
-                candidateCount: searchResults.length 
+                candidateCount: searchResults.length
             });
+
+            const isDev = process.env.NODE_ENV !== 'production';
+            const titleMatchThreshold = Math.max(55, minConfidence * 0.7);
+            const imageFallbackThreshold = 45;
 
             if (searchResults.length === 0) {
                 return [];
@@ -197,74 +202,78 @@ class ProductMatcherService {
             // Extract source metadata
             const sourceModel = TextSimilarity.extractModelNumber(sourceProduct.title);
             const sourceBrand = sourceProduct.metadata?.brand || TextSimilarity.extractBrand(sourceProduct.title);
+            const sourceCategory = TextSimilarity.inferCategory(sourceProduct.title);
 
-            // === STAGE 1: Text Pre-Filter (Cheap) ===
-            logger.info('Stage 1: Text pre-filtering candidates');
-            
-            // Quick token overlap check - skip candidates with < 3 overlapping tokens
-            const tokenFiltered = searchResults.filter(candidate => {
-                const overlap = TextSimilarity.calculateTokenOverlap(
-                    sourceProduct.title,
-                    candidate.title
-                );
-                return overlap >= 3;
-            });
-            
-            logger.info('Token overlap filtering', { 
-                before: searchResults.length,
-                after: tokenFiltered.length 
-            });
-
-            // Rank by text similarity and take top 3-4
-            const textRanked = TextSimilarity.rankBySimilarity(
+            // === STAGE 1: Title-first ranking ===
+            const textRankedAll = TextSimilarity.rankBySimilarity(
                 sourceProduct.title,
-                tokenFiltered
-            ).slice(0, 4); // Only top 4 candidates
-
-            logger.info('Text ranking complete', { topCandidates: textRanked.length });
-
-            if (textRanked.length === 0) {
-                logger.warn('No candidates passed text pre-filter');
-                return [];
-            }
-
-            // === STAGE 2: Image Comparison Only on Top Candidates ===
-            logger.info('Stage 2: Image comparison on top candidates');
-            
-            // Filter candidates that have images
-            const withImages = textRanked.filter(r => r.imageUrl);
-            
-            if (withImages.length === 0) {
-                logger.warn('No top candidates have images, using text-only matching');
-                return textRanked
-                    .filter(match => match.textSimilarity >= minConfidence * 0.7)
-                    .map(match => ({
-                        ...match,
-                        confidence: match.textSimilarity,
-                        imageSimilarity: null,
-                        matchMethod: 'text-only',
-                    }));
-            }
-
-            // Batch compare images (only 3-4 images now, not 15+)
-            const imageUrls = withImages.map(r => r.imageUrl);
-            const imageComparison = await ImageComparison.batchCompare(
-                sourceProduct.imageUrl,
-                imageUrls,
-                50 // Lower threshold for initial filtering
+                searchResults
             );
 
-            // === Combine All Signals ===
-            const matches = [];
-            const imageResultMap = new Map(); // Fix array order issue
-            
-            imageComparison.results.forEach((result, idx) => {
-                imageResultMap.set(withImages[idx].imageUrl, result);
+            const titleMatches = textRankedAll
+                .filter(candidate => candidate.textSimilarity >= titleMatchThreshold)
+                .slice(0, 8);
+
+            logger.info('Title matching complete', {
+                titleMatchThreshold,
+                totalRanked: textRankedAll.length,
+                titleMatches: titleMatches.length,
             });
 
-            for (const product of withImages) {
-                const imageResult = imageResultMap.get(product.imageUrl);
-                if (!imageResult) continue;
+            const candidatesForEvaluation =
+                titleMatches.length > 0 ? titleMatches : textRankedAll.slice(0, 8);
+
+            const withImages = candidatesForEvaluation.filter(candidate => candidate.imageUrl);
+
+            let imageResultMap = new Map();
+            if (withImages.length > 0) {
+                const imageUrls = withImages.map(candidate => candidate.imageUrl);
+                const imageComparison = await ImageComparison.batchCompare(
+                    sourceProduct.imageUrl,
+                    imageUrls,
+                    0
+                );
+
+                imageComparison.results.forEach((result, idx) => {
+                    imageResultMap.set(withImages[idx].imageUrl, result);
+                });
+            }
+
+            const matches = [];
+
+            for (const product of candidatesForEvaluation) {
+                const imageResult = product.imageUrl ? imageResultMap.get(product.imageUrl) : null;
+                const imageScore = imageResult ? imageResult.similarity : null;
+                const candidateCategory = TextSimilarity.inferCategory(product.title);
+                const categoryConflict =
+                    !!sourceCategory && !!candidateCategory && sourceCategory !== candidateCategory;
+
+                const matchDebug = {
+                    candidateTitle: product.title,
+                    imageScore,
+                    textScore: product.textSimilarity,
+                    finalScore: null,
+                    categoryConflict,
+                    rejectedReason: null,
+                };
+
+                if (categoryConflict) {
+                    matchDebug.rejectedReason = 'category_conflict';
+                    if (isDev) {
+                        console.log('[MatcherDebug]', matchDebug);
+                    }
+                    continue;
+                }
+
+                // Image fallback mode: title match not found, rely on image threshold.
+                const isImageFallbackMode = titleMatches.length === 0;
+                if (isImageFallbackMode && (imageScore === null || imageScore < imageFallbackThreshold)) {
+                    matchDebug.rejectedReason = imageScore === null ? 'no_image' : 'low_image';
+                    if (isDev) {
+                        console.log('[MatcherDebug]', matchDebug);
+                    }
+                    continue;
+                }
                 
                 // Extract candidate metadata
                 const candidateModel = TextSimilarity.extractModelNumber(product.title);
@@ -281,8 +290,9 @@ class ProductMatcherService {
                 }
 
                 // === Smart Confidence Calculation ===
+                const effectiveImageScore = imageScore ?? 0;
                 const confidenceResult = this.calculateConfidence({
-                    imageSimilarity: imageResult.similarity,
+                    imageSimilarity: effectiveImageScore,
                     textSimilarity: product.textSimilarity,
                     brandMatch,
                     modelMatch,
@@ -291,29 +301,49 @@ class ProductMatcherService {
                     candidatePrice: product.price
                 });
 
+                // If both text and image exist, boost candidates that are strong on both.
+                let finalScore = confidenceResult.confidence;
+                if (imageScore !== null) {
+                    const bothStrongScore = Math.round(((product.textSimilarity * 0.5) + (imageScore * 0.5)) * 100) / 100;
+                    finalScore = Math.round(((confidenceResult.confidence * 0.7) + (bothStrongScore * 0.3)) * 100) / 100;
+                }
+
                 // Model number match = near-perfect match
                 if (modelMatch) {
                     logger.info('Model number match found!', { 
                         sourceModel, 
                         candidateModel,
-                        confidence: confidenceResult.confidence
+                        confidence: finalScore
                     });
                 }
 
+                matchDebug.finalScore = finalScore;
+
                 // Only include if confidence meets threshold
-                if (confidenceResult.confidence >= minConfidence) {
+                const threshold = isImageFallbackMode ? imageFallbackThreshold : minConfidence;
+                if (finalScore >= threshold) {
+                    if (isDev) {
+                        console.log('[MatcherDebug]', matchDebug);
+                    }
+
                     matches.push({
                         ...product,
-                        confidence: confidenceResult.confidence,
+                        confidence: finalScore,
                         confidenceExplanation: confidenceResult.explanation,
-                        imageSimilarity: imageResult.similarity,
+                        imageSimilarity: imageScore,
+                        imageHashScores: imageResult.hashScores || null,
                         textSimilarity: product.textSimilarity,
                         textAnalysis: product.textAnalysis,
                         brandMatch,
                         modelMatch,
                         priceDiff: priceDiff ? Math.round(priceDiff * 100) : null,
-                        matchMethod: 'image-text-combined',
+                        matchMethod: isImageFallbackMode ? 'image-fallback' : (imageScore !== null ? 'title-image-combined' : 'title-only'),
                     });
+                } else {
+                    matchDebug.rejectedReason = 'below_threshold';
+                    if (isDev) {
+                        console.log('[MatcherDebug]', matchDebug);
+                    }
                 }
             }
 
@@ -321,8 +351,10 @@ class ProductMatcherService {
             matches.sort((a, b) => b.confidence - a.confidence);
 
             logger.info('Product matching complete', { 
-                stage1Candidates: textRanked.length,
-                stage2ImagesCompared: withImages.length,
+                titleMatches: titleMatches.length,
+                evaluatedCandidates: candidatesForEvaluation.length,
+                imagesCompared: withImages.length,
+                mode: titleMatches.length > 0 ? 'title-first' : 'image-fallback',
                 matchesFound: matches.length 
             });
 
